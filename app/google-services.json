@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "454653129251",
+    "project_id": "staymate-uptm",
+    "storage_bucket": "staymate-uptm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:454653129251:android:351764294455b04bc17796",
+        "android_client_info": {
+          "package_name": "com.staymate.uptm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsJOX0JD4Ok9TfWmpPzdSdcO1h9d8Olfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
