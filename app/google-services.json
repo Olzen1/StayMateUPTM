@@ -12,7 +12,20 @@
           "package_name": "com.staymate.uptm"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "454653129251-8gcr2lgr81akrdmubpp61hnbrch42kt1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.staymate.uptm",
+            "certificate_hash": "2a021692fd2f6aadcb17d6645b5807a402729090"
+          }
+        },
+        {
+          "client_id": "454653129251-rkr2u17bd8ipcots7stnc6p9aghnt8h9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBsJOX0JD4Ok9TfWmpPzdSdcO1h9d8Olfw"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "454653129251-rkr2u17bd8ipcots7stnc6p9aghnt8h9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

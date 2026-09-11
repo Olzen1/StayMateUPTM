@@ -67,7 +67,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var showError by rememberSaveable { mutableStateOf("") }
 
 
-    val webClientId = "1:454653129251:web:9e216e58cc1c0332c17796"
+    val webClientId = "454653129251-rkr2u17bd8ipcots7stnc6p9aghnt8h9.apps.googleusercontent.com"
 
     val googleSignInClient = remember {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -93,7 +93,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     }
                 }
         } catch (e: Exception) {
-            showError = "Google sign-in cancelled"
+            android.util.Log.e("StayMateAuth", "Google sign-in error", e)
+            showError = "Google error: ${e.message}"
         }
     }
 

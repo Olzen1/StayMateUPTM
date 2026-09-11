@@ -76,8 +76,11 @@
         // Google Sign-In
         implementation(libs.play.services.auth)
 
-        // Room Database
-        implementation(libs.room.runtime)
-        implementation(libs.room.ktx)
-        ksp(libs.room.compiler)
+        //firestore
+        implementation(libs.kotlinx.coroutines.play.services)
+        implementation(libs.kotlinx.coroutines.core)
+        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+        implementation("com.google.firebase:firebase-firestore-ktx")
+        implementation("com.google.firebase:firebase-firestore")
+        implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     }

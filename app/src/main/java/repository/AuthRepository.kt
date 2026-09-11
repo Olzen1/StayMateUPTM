@@ -1,0 +1,87 @@
+package com.staymate.uptm.repository
+
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.staymate.uptm.utils.UptmConstants
+import kotlinx.coroutines.tasks.await // This is the magic from kotlinx-coroutines-play-services!
+import com.google.firebase.firestore.FirebaseFirestore
+import com.staymate.uptm.model.UserProfile
+
+class AuthRepository {
+
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
+    /**
+     * Validates if the email belongs to a UPTM student.
+     * @return true if valid, false otherwise.
+     */
+    fun isUptmEmail(email: String): Boolean {
+        return email.trim().endsWith(UptmConstants.EMAIL_DOMAIN, ignoreCase = true)
+    }
+
+    /**
+     * Signs in with Email and Password.
+     * If the user does not exist, it automatically creates the account.
+     */
+    suspend fun signInOrCreateWithEmail(email: String, password: String): Result<String> {
+        return try {
+            // 1. Try to sign in first
+            auth.signInWithEmailAndPassword(email, password).await()
+            Result.success(auth.currentUser?.uid ?: "")
+        } catch (e: Exception) {
+            // 2. If the error is "user-not-found", silently create the account
+            if (e.message?.contains("user-not-found", ignoreCase = true) == true) {
+                try {
+                    auth.createUserWithEmailAndPassword(email, password).await()
+                    Result.success(auth.currentUser?.uid ?: "")
+                } catch (createException: Exception) {
+                    Result.failure(createException)
+                }
+            } else {
+                // 3. Any other error (wrong password, network issue) is passed up
+                Result.failure(e)
+            }
+        }
+    }
+    suspend fun signInWithGoogle(idToken: String): Result<String> {
+        return try {
+            // 1. Create a Firebase credential using the Google ID Token
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+            // 2. Sign in to Firebase with this credential
+            auth.signInWithCredential(credential).await()
+
+            val user = auth.currentUser
+
+            // 3. THE UPTM CHECK: Verify the email belongs to UPTM
+            if (user != null && isUptmEmail(user.email ?: "")) {
+                Result.success(user.uid)
+            } else {
+                // 4. REJECTION: If it's a personal Gmail or wrong domain, sign them out immediately!
+                auth.signOut()
+                Result.failure(Exception("Please use a valid UPTM student email (@student.uptm.edu.my)."))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun doesUserProfileExist(uid: String): Boolean {
+        return try {
+            val document = firestore.collection("users").document(uid).get().await()
+            document.exists()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun createUserProfile(profile: UserProfile): Result<Boolean> {
+        return try {
+            firestore.collection("users").document(profile.uid).set(profile).await()
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    fun currentUid(): String? = auth.currentUser?.uid
+    fun currentEmail(): String? = auth.currentUser?.email
+}
