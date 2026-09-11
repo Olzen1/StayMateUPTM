@@ -3,9 +3,13 @@ package com.staymate.uptm.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.staymate.uptm.utils.UptmConstants
-import kotlinx.coroutines.tasks.await // This is the magic from kotlinx-coroutines-play-services!
+import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.FirebaseFirestore
 import com.staymate.uptm.model.UserProfile
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlin.collections.remove
 
 class AuthRepository {
 
@@ -84,4 +88,18 @@ class AuthRepository {
     }
     fun currentUid(): String? = auth.currentUser?.uid
     fun currentEmail(): String? = auth.currentUser?.email
+    fun observeUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
+        val listener = firestore.collection("users").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toObject(UserProfile::class.java))
+            }
+        awaitClose { listener.remove() }
+    }
+    fun signOut() {
+        auth.signOut()
+    }
 }

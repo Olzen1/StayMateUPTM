@@ -1,8 +1,6 @@
 package com.staymate.uptm
 
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,18 +54,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import viewmodel.ProfileViewModel
+import com.staymate.uptm.viewmodel.RootViewModel
+import viewmodel.ProfileUiState
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    viewModel: ProfileViewModel = viewModel(),
+    rootViewModel: RootViewModel = viewModel() // Shared instance from RootScreen
+) {
     val context = LocalContext.current
-    val firebaseUser = FirebaseAuth.getInstance().currentUser
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // NAME — comes from the logged-in account, never hardcoded
-    var userName by remember { mutableStateOf(resolveDisplayName(firebaseUser)) }
+    // Extract data from Firestore via ViewModel (Single Source of Truth!)
+    val profile = (uiState as? ProfileUiState.Success)?.profile
+    val userName = profile?.fullName ?: "Student"
+    val userCourse = profile?.course ?: ""
+    val userSemester = profile?.semester ?: ""
 
-    // COURSE & SEMESTER — empty right after login, filled via Edit Profile (UI only for now)
-    var userCourse by remember { mutableStateOf("") }
-    var userSemester by remember { mutableStateOf("") }
+    // ... keep the profileImageUri and photoPicker code exactly as it is ...
 
     // PROFILE PHOTO — default icon until the user picks one
     var profileImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -274,9 +281,9 @@ fun ProfileScreen() {
         EditProfileDialog(
             onDismiss = { showEditDialog = false },
             onSave = { name, course, semester ->
-                userName = name
-                userCourse = course
-                userSemester = semester
+                // TODO (later sprint): persist edits via repository.updateUserProfile(...).
+                // Edits are intentionally ignored for now: Firestore is the single
+                // source of truth, and this dialog does not write to it yet.
                 showEditDialog = false
             },
             currentName = userName,
@@ -289,42 +296,18 @@ fun ProfileScreen() {
         LogoutDialog(
             onDismiss = { showLogoutDialog = false },
             onConfirm = {
-                FirebaseAuth.getInstance().signOut()
-                (context as? Activity)?.let { activity ->
-                    val intent = Intent(activity, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    activity.startActivity(intent)
-                    activity.finish()
-                }
+                rootViewModel.logout() // Magic! Auth listener flips screen to Login
                 showLogoutDialog = false
             }
         )
+            }
+
     }
-}
+
 
 // ---------- helpers ----------
 
-/**
- * Decides what name to show. Priority:
- * 1. The name stored in the Firebase account (empty for email/password logins by default)
- * 2. A friendly name built from the email: "ilman.aidil@uptm.edu.my" -> "Ilman Aidil"
- */
-private fun resolveDisplayName(user: FirebaseUser?): String {
-    user?.displayName?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
 
-    val emailName = user?.email
-        ?.substringBefore("@")
-        ?.replace('.', ' ')
-        ?.replace('_', ' ')
-        ?.replace('-', ' ')
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
-        ?: return "Student"
-
-    return emailName.split(" ").joinToString(" ") { word ->
-        word.replaceFirstChar { it.uppercase() }
-    }
-}
 
 /**
  * Turns a picked photo (Uri) into a Compose ImageBitmap, shrunk to roughly
