@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 sealed class ProfileUiState {
@@ -23,21 +25,20 @@ class ProfileViewModel : ViewModel() {
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
-        val uid = repository.currentUid()
-        if (uid == null) {
-            _uiState.value = ProfileUiState.Error("Not signed in.")
-        } else {
-            viewModelScope.launch {
-                repository.observeUserProfile(uid)
-                    .catch { e -> _uiState.value = ProfileUiState.Error(e.message ?: "Failed to load profile") }
-                    .collect { profile ->
-                        _uiState.value = if (profile != null) {
-                            ProfileUiState.Success(profile)
-                        } else {
-                            ProfileUiState.Loading
-                        }
+        viewModelScope.launch {
+            repository.observeAuthUid()
+                .flatMapLatest { uid ->
+                    if (uid == null) flowOf(null)
+                    else repository.observeUserProfile(uid)
+                }
+                .catch { e -> _uiState.value = ProfileUiState.Error(e.message ?: "Failed to load profile") }
+                .collect { profile ->
+                    _uiState.value = if (profile != null) {
+                        ProfileUiState.Success(profile)
+                    } else {
+                        ProfileUiState.Loading
                     }
-            }
+                }
         }
     }
-}
+    }

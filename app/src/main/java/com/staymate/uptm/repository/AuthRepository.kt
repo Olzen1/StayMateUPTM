@@ -88,6 +88,17 @@ class AuthRepository {
     }
     fun currentUid(): String? = auth.currentUser?.uid
     fun currentEmail(): String? = auth.currentUser?.email
+    fun observeAuthUid(): Flow<String?> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser?.uid)
+        }
+        auth.addAuthStateListener(listener) // fires immediately with current user
+        awaitClose { auth.removeAuthStateListener(listener) }
+    }
+
+    fun signOut() {
+        auth.signOut()
+    }
     fun observeUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
         val listener = firestore.collection("users").document(uid)
             .addSnapshotListener { snapshot, error ->
@@ -98,8 +109,5 @@ class AuthRepository {
                 trySend(snapshot?.toObject(UserProfile::class.java))
             }
         awaitClose { listener.remove() }
-    }
-    fun signOut() {
-        auth.signOut()
     }
 }
