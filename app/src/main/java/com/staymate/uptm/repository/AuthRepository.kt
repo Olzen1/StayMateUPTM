@@ -1,6 +1,13 @@
 package com.staymate.uptm.repository
 
+import android.content.Context
+
+import com.google.android.gms.auth.api.signin.*
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+import com.staymate.uptm.R
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.staymate.uptm.utils.UptmConstants
 import kotlinx.coroutines.tasks.await
@@ -10,43 +17,33 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlin.collections.remove
-
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 class AuthRepository {
+
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-    /**
-     * Validates if the email belongs to a UPTM student.
-     * @return true if valid, false otherwise.
-     */
+
     fun isUptmEmail(email: String): Boolean {
         return email.trim().endsWith(UptmConstants.EMAIL_DOMAIN, ignoreCase = true)
     }
-
-    /**
-     * Signs in with Email and Password.
-     * If the user does not exist, it automatically creates the account.
-     */
-    suspend fun signInOrCreateWithEmail(email: String, password: String): Result<String> {
+    suspend fun signInWithEmail(email: String, password: String): Result<String> { // sign-in ONLY: no auto-create anymore, registration lives behind the Google door now
         return try {
-            // 1. Try to sign in first
-            auth.signInWithEmailAndPassword(email, password).await()
-            Result.success(auth.currentUser?.uid ?: "")
-        } catch (e: Exception) {
-            // 2. If the error is "user-not-found", silently create the account
-            if (e.message?.contains("user-not-found", ignoreCase = true) == true) {
-                try {
-                    auth.createUserWithEmailAndPassword(email, password).await()
-                    Result.success(auth.currentUser?.uid ?: "")
-                } catch (createException: Exception) {
-                    Result.failure(createException)
-                }
-            } else {
-                // 3. Any other error (wrong password, network issue) is passed up
-                Result.failure(e)
+            auth.signInWithEmailAndPassword(email, password).await() // try the existing account
+            Result.success(auth.currentUser?.uid ?: "") // hand back the uid on success
+        } catch (e: FirebaseAuthException) {
+            when (e.errorCode) { // stable error codes from the Firebase backend
+                "ERROR_USER_NOT_FOUND", // protection OFF: email unknown
+                "ERROR_INVALID_CREDENTIAL" -> // protection ON: unknown email OR wrong password share this code
+                    Result.failure(Exception("No account found or wrong password. First time? Continue with Google.")) // friendly + privacy-safe: never reveals WHICH emails exist
+                else -> Result.failure(e) // disabled account, network, anything else: pass up untouched
             }
+        } catch (e: Exception) {
+            Result.failure(e) // non-Firebase failures
         }
     }
+
     suspend fun signInWithGoogle(idToken: String): Result<String> {
         return try {
             // 1. Create a Firebase credential using the Google ID Token
@@ -96,8 +93,13 @@ class AuthRepository {
         awaitClose { auth.removeAuthStateListener(listener) }
     }
 
-    fun signOut() {
-        auth.signOut()
+    fun signOut(context: Context) { // signs out of Firebase AND clears Google's cached default account for this app
+        auth.signOut() // Firebase side: observeAuthUid flips to null → router sends us to Login
+        val gso = GoogleSignInOptions.Builder(DEFAULT_SIGN_IN) // same options shape as the login client
+            .requestIdToken(context.getString(R.string.default_web_client_id)) // read the generated ID through the passed Context
+            .requestEmail() // same email request as login
+            .build()
+        GoogleSignIn.getClient(context, gso).signOut() // Google side: forgets the cached account so the NEXT tap shows the chooser
     }
     fun observeUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
         val listener = firestore.collection("users").document(uid)
@@ -109,5 +111,17 @@ class AuthRepository {
                 trySend(snapshot?.toObject(UserProfile::class.java))
             }
         awaitClose { listener.remove() }
+    }
+
+    suspend fun linkEmailPassword(email: String, password: String): Result<Unit> { // glues an email+password key onto the currently signed-in Google user
+        val user = auth.currentUser // the Firebase user created by the Google sign-in
+        if (user == null) return Result.failure(Exception("Not signed in")) // safety net: cannot glue a key to nobody
+        return try {
+            val credential = EmailAuthProvider.getCredential(email, password) // turns email+password into a digital key (AuthCredential)
+            user.linkWithCredential(credential).await() // THE GLUE: attaches that key to the SAME uid, no second account
+            Result.success(Unit) // Unit = "job done, nothing to hand back"
+        } catch (e: Exception) {
+            Result.failure(e) // hand any failure up to the ViewModel
+        }
     }
 }

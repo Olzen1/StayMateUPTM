@@ -51,4 +51,27 @@ object UptmConstants {
         "Doctor of Philosophy in Education",
         "Master of Education (TESL)"
     )
+    // List of post types the user can choose from
+    const val POST_TYPE_HOUSE_SUGGESTION = "House Suggestion" // function holds the exact display label for house suggestion posts
+    const val POST_TYPE_HOUSEMATE_WANTED = "Housemate Wanted" // function holds the exact display label for housemate wanted posts
+    val POST_TYPES = listOf(POST_TYPE_HOUSE_SUGGESTION, POST_TYPE_HOUSEMATE_WANTED) // function builds the dropdown list from the two name tags above
+
+    // List of property types for the dropdown
+    val PROPERTY_TYPES = listOf("Studio", "Condominium", "Apartment", "Landed") // function makes a fixed list of house types
+
+    // List of gender preferences
+    val GENDER_PREFERENCES = listOf("Male", "Female") // function makes a fixed list for gender choice
+
+    // List of facilities for the multi-select chips
+    val FACILITIES = listOf( // function makes a fixed list of house features
+        "WiFi", "Air Conditioning", "Parking", "Washing Machine",
+        "Kitchen", "24hr Security", "Furnished", "Pet Friendly",
+        "Gym", "Badminton Court", "BBQ"
+    )
+
+    // List of bedroom counts for the dropdown (kept as text, turned into a number only when posting)
+    val BEDROOM_OPTIONS = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10") // function makes a fixed list of bedroom counts
+
+    const val POST_TYPE_KEY_SUGGESTION = "house_suggestion" // function holds the locked database key for suggestion posts
+    const val POST_TYPE_KEY_HOUSEMATE = "housemate_wanted" // function holds the locked database key for housemate posts
 }

@@ -41,6 +41,7 @@
     }
 
     dependencies {
+        implementation(libs.androidx.compose.remote.creation.core)
         // Core
         implementation(libs.androidx.core.ktx)
         implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -60,7 +61,7 @@
 
         // Testing
         testImplementation(libs.junit)
-        androidTestImplementation(platform(libs.androidx.compose.bom))
+
         androidTestImplementation(libs.androidx.compose.ui.test.junit4)
         androidTestImplementation(libs.androidx.espresso.core)
         androidTestImplementation(libs.androidx.junit)
@@ -79,8 +80,10 @@
         //firestore
         implementation(libs.kotlinx.coroutines.play.services)
         implementation(libs.kotlinx.coroutines.core)
-        implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-        implementation("com.google.firebase:firebase-firestore-ktx")
-        implementation("com.google.firebase:firebase-firestore")
-        implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+        implementation(libs.androidx.lifecycle.viewmodel.compose)
+        implementation(libs.firebase.firestore.ktx)
+        implementation(libs.firebase.firestore)
+        implementation(libs.androidx.lifecycle.runtime.compose)
+
+        implementation(libs.coil.compose) // function adds the Coil library that loads and shows pictures smoothly
     }

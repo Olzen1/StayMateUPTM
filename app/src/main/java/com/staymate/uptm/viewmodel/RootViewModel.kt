@@ -1,8 +1,10 @@
 package com.staymate.uptm.viewmodel
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth // <-- NEW
+import com.google.firebase.auth.FirebaseAuth
 import com.staymate.uptm.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +18,7 @@ sealed class StartupState {
     object Ready : StartupState()
 }
 
-class RootViewModel : ViewModel() {
+class RootViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = AuthRepository()
 
     private val _startupState = MutableStateFlow<StartupState>(StartupState.Loading)
@@ -45,10 +47,9 @@ class RootViewModel : ViewModel() {
         FirebaseAuth.getInstance().removeAuthStateListener(authListener)
     }
 
-    // NEW: Clean logout function
+    // logout function
     fun logout() {
-        repository.signOut()
-        // The authListener above will instantly catch this and flip the UI to LoginScreen!
+        repository.signOut(getApplication()) // getApplication() hands over the stored Application Context
     }
     fun checkStartup() {
         viewModelScope.launch {

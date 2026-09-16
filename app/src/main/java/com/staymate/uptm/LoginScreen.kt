@@ -1,6 +1,5 @@
 package com.staymate.uptm
 
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -15,8 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -26,11 +27,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,32 +46,40 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
+import com.staymate.uptm.repository.AuthRepository
+import com.staymate.uptm.viewmodel.AuthViewModel
+import com.staymate.uptm.viewmodel.AuthViewModelFactory
+import com.staymate.uptm.viewmodel.LoginUiState
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit) {
+    val factory = remember { AuthViewModelFactory(AuthRepository()) }// remember builds the factory ONCE, not on every recomposition
+    val authViewModel: AuthViewModel = viewModel(factory = factory)
+    val loginUiState by authViewModel.loginUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
+    val errorMessage = (loginUiState as? LoginUiState.Error)?.message// safe cast: returns the Error object only when state IS Error, otherwise null
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var showError by rememberSaveable { mutableStateOf("") }
+    val webClientId = stringResource(R.string.default_web_client_id)
 
-
-    val webClientId = "454653129251-rkr2u17bd8ipcots7stnc6p9aghnt8h9.apps.googleusercontent.com"
-
+    LaunchedEffect(loginUiState) {
+        // when state flips to Success, notify RootScreen exactly like legacy did
+        if (loginUiState is LoginUiState.Success) {
+            onLoginSuccess()
+        }
+    }
     val googleSignInClient = remember {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(webClientId)
@@ -82,19 +93,19 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     ) { result ->
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
+            // throws if the user cancelled or Google Play services failed
             val account = task.getResult(Exception::class.java)
-            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-            auth.signInWithCredential(credential)
-                .addOnCompleteListener { authTask ->
-                    if (authTask.isSuccessful) {
-                        onLoginSuccess()
-                    } else {
-                        showError = "Google sign-in failed"
-                    }
-                }
+            // idToken is Google's proof of login; the Firebase exchange now happens in the repository
+            val idToken = account.idToken
+            if (idToken != null) {
+                authViewModel.loginWithGoogle(idToken)
+            } else {
+                // should never happen while requestIdToken is configured; log for debugging
+                android.util.Log.e("StayMateAuth", "Google idToken was null")
+            }
         } catch (e: Exception) {
+            // user pressed back / cancelled: staying silent here is standard UX
             android.util.Log.e("StayMateAuth", "Google sign-in error", e)
-            showError = "Google error: ${e.message}"
         }
     }
 
@@ -267,13 +278,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 )
             )
 
-            if (showError.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
+
+
+            // render the error Text only while there is a message
+            if (errorMessage != null) {
                 Text(
-                    text = showError,
-                    fontSize = 12.sp,
-                    color = Color(0xFFFF1744),
-                    textAlign = TextAlign.Center
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+
                 )
             }
 
@@ -281,33 +294,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Button(
                 onClick = {
-                    showError = ""
-                    when {
-                        email.isEmpty() || password.isEmpty() -> {
-                            showError = "Please fill in all fields"
-                        }
-                        !email.endsWith("@uptm.edu.my") -> {
-                            showError = "Please use your UPTM email account"
-                        }
-                        else -> {
-                            auth.signInWithEmailAndPassword(email, password)
-                                .addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        onLoginSuccess()
-                                    } else {
-                                        showError = task.exception?.message ?: "Login failed"
-                                    }
-                                }
-                        }
-                    }
+                    authViewModel.loginWithEmail(email, password)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF0091FF)
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0091FF)
+
                 )
+                ,
+                enabled = loginUiState !is LoginUiState.Loading
             ) {
                 Text(
                     text = "Log In",
@@ -319,7 +316,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "⚠ Use only UPTM Account",
+                text = "Use only UPTM Account",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFFFF1744)

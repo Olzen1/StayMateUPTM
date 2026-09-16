@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +35,8 @@ import com.staymate.uptm.utils.UptmConstants
 import com.staymate.uptm.viewmodel.OnboardingUiState
 import com.staymate.uptm.viewmodel.OnboardingViewModel
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 
 @Composable
@@ -79,6 +82,46 @@ fun OnboardingScreen(
         (uiState as? OnboardingUiState.Error)?.let {
             Text(it.message, color = Color(0xFFFF1744), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
+        }
+        val accountEmail = viewModel.accountEmail // pre-printed name tag: the Google email, read-only
+        val password by viewModel.password.collectAsStateWithLifecycle() // live password text from the VM
+        val confirmPassword by viewModel.confirmPassword.collectAsStateWithLifecycle() // live re-typed text from the VM
+        val passwordErrors = viewModel.getPasswordErrors() // bouncer checklist; recomputes on every recomposition
+
+        OutlinedTextField(
+            value = accountEmail, // shows the Google email
+            onValueChange = { }, // empty lambda: new text is thrown away, so typing does nothing
+            enabled = false, // greyed-out look = "official, don't touch"
+            label = { Text("UPTM Email") }, // tells them which email the password glues to
+            modifier = Modifier.fillMaxWidth() // match the other fields
+        )
+
+        OutlinedTextField(
+            value = password, // current password text
+            onValueChange = { viewModel.onPasswordChange(it) }, // every keystroke goes to the VM
+            label = { Text("Password") }, // field label
+            visualTransformation = PasswordVisualTransformation(), // shows dots instead of real characters
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // soft keyboard switches to password mode
+            modifier = Modifier.fillMaxWidth() // match the other fields
+        )
+
+        OutlinedTextField(
+            value = confirmPassword, // current re-typed text
+            onValueChange = { viewModel.onConfirmPasswordChange(it) }, // every keystroke goes to the VM
+            label = { Text("Re-enter Password") }, // field label
+            visualTransformation = PasswordVisualTransformation(), // dots again
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // password keyboard again
+            modifier = Modifier.fillMaxWidth() // match the other fields
+        )
+
+        if (password.isNotEmpty()) { // only show the checklist once they start typing, so an empty form stays quiet
+            passwordErrors.forEach { errorText -> // loop over every broken rule
+                Text(
+                    text = "• $errorText", // bullet + the rule text
+                    color = MaterialTheme.colorScheme.error, // red = "fix me"
+                    style = MaterialTheme.typography.bodySmall // small helper text
+                )
+            }
         }
         Button(
             onClick = viewModel::submit,

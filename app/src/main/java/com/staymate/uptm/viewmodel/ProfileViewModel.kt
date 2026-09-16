@@ -1,4 +1,4 @@
-package viewmodel
+package com.staymate.uptm.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

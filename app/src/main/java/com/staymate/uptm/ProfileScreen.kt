@@ -52,13 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import viewmodel.ProfileViewModel
+import com.staymate.uptm.viewmodel.ProfileViewModel
 import com.staymate.uptm.viewmodel.RootViewModel
-import viewmodel.ProfileUiState
+import com.staymate.uptm.viewmodel.ProfileUiState
 
 @Composable
 fun ProfileScreen(
