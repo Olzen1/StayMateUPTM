@@ -1,8 +1,6 @@
 package com.staymate.uptm.repository // function tells Android where this file lives
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import com.staymate.uptm.model.Post
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
@@ -14,8 +12,21 @@ import kotlinx.coroutines.channels.awaitClose
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 class PostRepository { // function creates the Waiter class
-
-    private val db = Firebase.firestore // function gets the connection to our Firestore database
+    // read ONE post by its id, live (null if the doc is missing or deleted)
+    fun observePostById(id: String): Flow<Post?> = callbackFlow {
+        // use the SAME firestore handle your observePosts uses on its first line.
+        // I wrote 'db' below — if your field is named differently, swap it to match exactly.
+        val listener = db.collection("posts").document(id).addSnapshotListener { snapshot, error ->
+            if (error != null) {            // the stream itself broke (rules / offline) -> hand the error upward
+                close(error)
+                return@addSnapshotListener
+            }
+            val post = snapshot?.toObject(Post::class.java)   // null when that doc simply doesn't exist
+            trySend(post)                   // push the one post (or null) to whoever is listening
+        }
+        awaitClose { listener.remove() }    // screen leaves -> unplug the listener (no leak)
+    }
+    private val db = FirebaseFirestore.getInstance() // function gets the connection to our Firestore database
 
     // Function to save a new post to the database
     suspend fun createPost(post: Post): Result<Unit> { // function makes a suspend function that returns Success or Failure

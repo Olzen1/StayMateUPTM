@@ -3,6 +3,7 @@ package com.staymate.uptm
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog // function imports the pop-up dialog tool
 import androidx.compose.material3.Text // function imports the text tool
 import androidx.compose.material3.TextButton // function imports the button for dialogs
@@ -13,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel // function imports the ViewModel tool
 import com.staymate.uptm.repository.AuthRepository
 import com.staymate.uptm.repository.PostRepository
@@ -25,12 +27,20 @@ fun MainScreen() {
     var showCreateSheet by rememberSaveable { mutableStateOf(false) } // function remembers if the Create menu is open
     var showTypeSelector by rememberSaveable { mutableStateOf(false) } // function remembers if the Type pop-up is open
     var selectedPostType by rememberSaveable { mutableStateOf("") } // function remembers which type the user picked
-
+    var selectedPostId by rememberSaveable { mutableStateOf<String?>(null) }
     Box(modifier = Modifier.fillMaxSize()) {
         // Content area (The TV Screen)
         Box(modifier = Modifier.fillMaxSize()) {
             when (currentRoute) { // function checks which channel we are on
-                "home" -> HomeScreen() // function shows the home feed
+                "home" -> HomeScreen(
+                    // function runs when a post card is tapped
+                    onPostClick = { postId ->
+                        // function saves the tapped post id
+                        selectedPostId = postId
+                        // function changes the channel to post details
+                        currentRoute = "post_details"
+                    }
+                )    // function shows the home feed
                 "profile" -> ProfileScreen() // function shows the profile
                 "add_post" -> AddPostScreen( // function shows the Add Post form
                     addPostViewModel = viewModel(factory = AddPostViewModelFactory(PostRepository(),
@@ -39,7 +49,26 @@ fun MainScreen() {
                     postType = selectedPostType, // function passes the chosen type to the screen
                     onNavigateBack = { currentRoute = "home" }, // function goes back to home channel
                     onPostSuccess = { currentRoute = "home" } // function goes back to home channel after posting
-                )
+                )"post_details" -> {
+                // function copies the saved id into a local safe value
+                val postId = selectedPostId
+
+                // function checks there is a real post id before showing details
+                if (postId != null) {
+                    PostDetailsScreen(
+                        postId = postId,
+                        onBack = { currentRoute = "home" }
+                    )
+                } else {
+                    // function shows a fallback if the app somehow opens details with no id
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No post selected")
+                    }
+                }
+            }
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Screen: $currentRoute") // function shows placeholder for other screens
@@ -49,7 +78,11 @@ fun MainScreen() {
         }
 
         // Bottom nav (The Remote Buttons)
-        if (currentRoute != "add_post") { // function hides the bottom nav bar while the Add Post form is open
+        // function marks screens that should not show the bottom remote
+        val hideBottomNav = currentRoute == "add_post" || currentRoute == "post_details"
+
+// function shows the bottom nav only when we are not on a focus screen
+        if (!hideBottomNav) { // function hides the bottom nav bar while the Add Post form is open
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

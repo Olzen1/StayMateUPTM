@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -35,6 +36,8 @@ fun EditProfileDialog(
     currentName: String = "",
     currentCourse: String = "",
     currentSemester: String = "",
+    isSaving: Boolean = false, // function is a write running? lock the button
+    errorMessage: String? = null, // function red words to show, or null for none
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -45,7 +48,7 @@ fun EditProfileDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -57,7 +60,7 @@ fun EditProfileDialog(
                 text = "Edit Profile",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -70,9 +73,9 @@ fun EditProfileDialog(
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF0091FF),
-                    focusedLabelColor = Color(0xFF0091FF),
-                    cursorColor = Color(0xFF0091FF)
+                    focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.onSurface
                 )
             )
 
@@ -113,13 +116,21 @@ fun EditProfileDialog(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // function if the server bounced the save, show the reason in red right above the button
+            if (errorMessage != null) {
+                Text(text = errorMessage, color = Color(0xFFFF1744), fontSize = 13.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = { onSave(name, course, semester) },
+                enabled = !isSaving, // function grey-out + ignore taps while a write is in flight
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0091FF))
             ) {
-                Text(text = "Save", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                // function swap the label so the user sees the work happening
+                Text(text = if (isSaving) "Saving…" else "Save", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
 
             Spacer(modifier = Modifier.height(24.dp))

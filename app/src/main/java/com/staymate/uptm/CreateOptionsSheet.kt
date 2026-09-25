@@ -19,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -43,9 +44,9 @@ fun CreateOptionsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = null
+        dragHandle = null,
     ) {
         Column(
             modifier = Modifier
@@ -70,7 +71,7 @@ fun CreateOptionsSheet(
                 text = "CREATE",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -79,7 +80,7 @@ fun CreateOptionsSheet(
             Text(
                 text = "What would you like to do?",
                 fontSize = 14.sp,
-                color = Color(0xFF9CA3AF)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -92,7 +93,7 @@ fun CreateOptionsSheet(
                     .height(90.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F7FA)
+                    containerColor =MaterialTheme.colorScheme.surface
                 ),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
@@ -126,7 +127,7 @@ fun CreateOptionsSheet(
                             text = "Add a Post",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A2E)
+                            color =MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -148,7 +149,7 @@ fun CreateOptionsSheet(
                     .height(90.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F7FA)
+                    containerColor =MaterialTheme.colorScheme.surface
                 ),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
@@ -182,7 +183,7 @@ fun CreateOptionsSheet(
                             text = "Create a Group",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A2E)
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

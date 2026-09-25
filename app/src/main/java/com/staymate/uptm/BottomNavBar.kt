@@ -24,6 +24,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -57,7 +58,7 @@ fun BottomNavBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
     ) {
         Row(
@@ -96,13 +97,13 @@ fun BottomNavBar(
                     spotColor = Color(0xFF0091FF).copy(alpha = 0.4f)
                 ),
             shape = CircleShape,
-            containerColor = Color(0xFF0091FF),
+            containerColor = MaterialTheme.colorScheme.onPrimary,
             elevation = FloatingActionButtonDefaults.elevation(0.dp)
         ) {
             Icon(
                 Icons.Default.Add,
                 contentDescription = "Add",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(26.dp)
             )
         }
@@ -122,7 +123,7 @@ private fun NavItemButton(
         Icon(
             item.icon,
             contentDescription = item.label,
-            tint = if (isSelected) Color(0xFF0091FF) else Color(0xFF9CA3AF),
+            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color(0xFF9CA3AF),
             modifier = Modifier.size(26.dp)
         )
     }

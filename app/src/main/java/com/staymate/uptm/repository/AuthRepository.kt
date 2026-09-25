@@ -74,7 +74,31 @@ class AuthRepository {
             false
         }
     }
-
+    // update ONLY the editable lines of a user's profile doc
+// we use update() (a correction pen), NOT set() (a fresh photocopy),
+// so we never accidentally erase email / createdAt / uid that this dialog never sends
+    suspend fun updateUserProfile(
+        uid: String,
+        fullName: String,
+        course: String,
+        semester: String
+    ): Result<Unit> {
+        return try {
+            // build a tiny map holding just the three changed values
+            val changes = mapOf(
+                "fullName" to fullName,
+                "course" to course,
+                "semester" to semester
+            )
+            // write that map onto the existing doc (partial overwrite)
+            firestore.collection("users").document(uid).update(changes).await()
+            // job done, nothing to hand back (same "Unit" token as linkEmailPassword)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            // hand any failure up to the ViewModel
+            Result.failure(e)
+        }
+    }
     suspend fun createUserProfile(profile: UserProfile): Result<Boolean> {
         return try {
             firestore.collection("users").document(profile.uid).set(profile).await()
@@ -83,6 +107,7 @@ class AuthRepository {
             Result.failure(e)
         }
     }
+
     fun currentUid(): String? = auth.currentUser?.uid
     fun currentEmail(): String? = auth.currentUser?.email
     fun observeAuthUid(): Flow<String?> = callbackFlow {

@@ -12,7 +12,7 @@
         defaultConfig {
             applicationId = "com.staymate.uptm"
             minSdk = 24
-            targetSdk = 35
+            targetSdk = 37
             versionCode = 1
             versionName = "1.0"
 
@@ -42,9 +42,12 @@
 
     dependencies {
         implementation(libs.androidx.compose.remote.creation.core)
+        implementation(libs.androidx.compose.runtime)
+        implementation(libs.androidx.compose.ui.geometry)
         // Core
         implementation(libs.androidx.core.ktx)
         implementation(libs.androidx.lifecycle.runtime.ktx)
+        implementation(libs.androidx.material3)
 
         // UI - Views & Material
         implementation(libs.material)
@@ -76,14 +79,13 @@
 
         // Google Sign-In
         implementation(libs.play.services.auth)
-
+        implementation(libs.firebase.storage) // Firebase Storage SDK
         //firestore
         implementation(libs.kotlinx.coroutines.play.services)
         implementation(libs.kotlinx.coroutines.core)
         implementation(libs.androidx.lifecycle.viewmodel.compose)
-        implementation(libs.firebase.firestore.ktx)
         implementation(libs.firebase.firestore)
         implementation(libs.androidx.lifecycle.runtime.compose)
-
+        implementation(libs.coil.network.okhttp) // // the internet-visa plugin, same version as coil-compose
         implementation(libs.coil.compose) // function adds the Coil library that loads and shows pictures smoothly
     }

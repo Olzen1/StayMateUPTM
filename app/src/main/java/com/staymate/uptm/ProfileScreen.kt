@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,7 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.staymate.uptm.viewmodel.ProfileViewModel
 import com.staymate.uptm.viewmodel.RootViewModel
 import com.staymate.uptm.viewmodel.ProfileUiState
-
+import com.staymate.uptm.viewmodel.ProfileSaveState // function brings in the save-button memory type
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel(),
@@ -71,7 +73,12 @@ fun ProfileScreen(
     val userName = profile?.fullName ?: "Student"
     val userCourse = profile?.course ?: ""
     val userSemester = profile?.semester ?: ""
-
+// function read the save button's live memory
+    val saveState by viewModel.saveState.collectAsStateWithLifecycle()
+// function is the write running right now? (used to lock the Save button)
+    val isSaving = saveState == ProfileSaveState.Saving
+// function pull the error words out, or null if there is no error
+    val saveError = (saveState as? ProfileSaveState.Error)?.message
     // ... keep the profileImageUri and photoPicker code exactly as it is ...
 
     // PROFILE PHOTO — default icon until the user picks one
@@ -95,7 +102,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
         // ---------- TOP: blue header, PROFILE title, NO gear icon ----------
@@ -103,7 +110,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .background(Color(0xFF0091FF)),
+                .background(colorScheme.primary),
             contentAlignment = Alignment.TopCenter
         ) {
             Text(
@@ -111,7 +118,7 @@ fun ProfileScreen(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 4.sp,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.padding(top = 24.dp)
             )
         }
@@ -188,7 +195,7 @@ fun ProfileScreen(
                 text = userName,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // ---------- COURSE & SEMESTER (nothing until the user adds them) ----------
@@ -200,7 +207,7 @@ fun ProfileScreen(
                 Text(
                     text = details,
                     fontSize = 14.sp,
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.clickable { showEditDialog = true }
                 )
             } else {
@@ -221,13 +228,13 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatItem("12", "Posts")
-                StatItem("8", "Saved Houses")
-                StatItem("5", "Groups")
+                StatItem("0", "Posts", MaterialTheme.colorScheme.background)
+                StatItem("0", "Saved Houses", MaterialTheme.colorScheme.onSurface)
+                StatItem("0", "Groups", MaterialTheme.colorScheme.surface)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -242,13 +249,20 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(color = MaterialTheme.colorScheme.surface)
                     .padding(vertical = 8.dp)
             ) {
-                MenuItem(Icons.Default.Edit, "Edit Profile") { showEditDialog = true }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF3F4F6))
+                MenuItem(Icons.Default.Edit, "Edit Profile", ) { showEditDialog = true }
+                HorizontalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.tertiary)
                 MenuItem(Icons.Default.Settings, "Settings") { /* TODO (later phase) */ }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF3F4F6))
+                HorizontalDivider(
+                    modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    ,
+                    color = MaterialTheme.colorScheme.tertiary)
                 MenuItem(Icons.Default.Info, "About StayMate UPTM") { /* TODO (later phase) */ }
             }
 
@@ -259,7 +273,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(color = MaterialTheme.colorScheme.surface)
                     .clickable { showLogoutDialog = true }
                     .padding(vertical = 16.dp, horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -273,17 +287,23 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
-
+// function when the write truly lands, close the sheet and reset the save memory
+    LaunchedEffect(saveState) {
+        if (saveState == ProfileSaveState.Success) {
+            showEditDialog = false // function leave the sheet
+            viewModel.resetSave() // function back to Idle so it cannot re-fire next open
+        }
+    }
     // ---------- EDIT PROFILE (UI only — no saving to database yet) ----------
     if (showEditDialog) {
         EditProfileDialog(
             onDismiss = { showEditDialog = false },
             onSave = { name, course, semester ->
-                // TODO (later sprint): persist edits via repository.updateUserProfile(...).
-                // Edits are intentionally ignored for now: Firestore is the single
-                // source of truth, and this dialog does not write to it yet.
-                showEditDialog = false
+                // function hand the typed values to the ViewModel; do NOT close here (close only on real Success, so errors keep the sheet open)
+                viewModel.saveProfile(name, course, semester)
             },
+            isSaving = isSaving, // function tells the sheet to lock + relabel its Save button
+            errorMessage = saveError, // function tells the sheet to show red words if the write bounced
             currentName = userName,
             currentCourse = userCourse,
             currentSemester = userSemester
@@ -292,7 +312,10 @@ fun ProfileScreen(
 
     if (showLogoutDialog) {
         LogoutDialog(
-            onDismiss = { showLogoutDialog = false },
+            onDismiss = {
+                showEditDialog = false // function close the sheet
+                viewModel.resetSave() // function wipe any old red error so the next open starts clean
+            },
             onConfirm = {
                 rootViewModel.logout() // Magic! Auth listener flips screen to Login
                 showLogoutDialog = false
@@ -303,14 +326,8 @@ fun ProfileScreen(
     }
 
 
-// ---------- helpers ----------
 
 
-
-/**
- * Turns a picked photo (Uri) into a Compose ImageBitmap, shrunk to roughly
- * targetPx so we don't load a giant 12-megapixel photo into memory for a 112dp circle.
- */
 private fun decodeUriToImageBitmap(context: Context, uri: Uri, targetPx: Int): ImageBitmap? {
     return try {
         // Pass 1: read only the image's SIZE (no pixels loaded)
@@ -338,7 +355,7 @@ private fun decodeUriToImageBitmap(context: Context, uri: Uri, targetPx: Int): I
 }
 
 @Composable
-private fun StatItem(number: String, label: String) {
+private fun StatItem(number: String, label: String, surface: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(number, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
         Spacer(modifier = Modifier.height(2.dp))

@@ -47,7 +47,7 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
         FirebaseAuth.getInstance().removeAuthStateListener(authListener)
     }
 
-    // logout function
+    // 1logout function
     fun logout() {
         repository.signOut(getApplication()) // getApplication() hands over the stored Application Context
     }
