@@ -223,19 +223,21 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ---------- STATS: Posts / Saved Houses / Groups (placeholder numbers) ----------
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(vertical = 20.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatItem("0", "Posts", MaterialTheme.colorScheme.background)
-                StatItem("0", "Saved Houses", MaterialTheme.colorScheme.onSurface)
-                StatItem("0", "Groups", MaterialTheme.colorScheme.surface)
-            }
+    val postCount by viewModel.userPostCount.collectAsStateWithLifecycle()
+    val savedPostCount by viewModel.savedPostCount.collectAsStateWithLifecycle()
+
+    // ---------- STATS: Posts / Saved Post / Groups ----------
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(vertical = 20.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        StatItem(postCount.toString(), "Posts", MaterialTheme.colorScheme.onSurface)
+        StatItem(savedPostCount.toString(), "Saved Post", MaterialTheme.colorScheme.onSurface)
+    }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -313,8 +315,9 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         LogoutDialog(
             onDismiss = {
-                showEditDialog = false // function close the sheet
+                showLogoutDialog = false // function close the sheet
                 viewModel.resetSave() // function wipe any old red error so the next open starts clean
+
             },
             onConfirm = {
                 rootViewModel.logout() // Magic! Auth listener flips screen to Login

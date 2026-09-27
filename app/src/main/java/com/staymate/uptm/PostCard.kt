@@ -1,73 +1,86 @@
 package com.staymate.uptm
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.staymate.uptm.model.Post
-import androidx.compose.foundation.clickable
-import androidx.compose.material3.MaterialTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
-// was:  fun PostCard(post: Post) {
-fun PostCard(post: Post, onClick: () -> Unit) {
+fun PostCard(
+    post: Post,
+    onClick: () -> Unit,
+    isSaved: Boolean = false,
+    onBookmarkClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp)
-            .clickable(onClick = onClick), // // tap anywhere on the card -> fire the handler
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+            .padding(vertical = 8.dp, horizontal = 12.dp)
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        // inner padding so nothing is glued to the card edges
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
 
-            // poster header: avatar + name + time, side by side
+            // Header: Avatar + Poster Name + Time
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // round avatar placeholder
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color.LightGray, CircleShape),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Poster avatar",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                // name + time stack; weight(1f) + ellipsis = long names get "..." not overflow
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = post.authorName,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -77,75 +90,47 @@ fun PostCard(post: Post, onClick: () -> Unit) {
                         fontSize = 12.sp
                     )
                 }
-            } // <-- lobby door CLOSED here (this is the line that was missing)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // type badge pill
-            Surface(
-                color = if (post.type == "house_suggestion") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier.height(20.dp)
-            ) {
-                Text(
-                    text = if (post.type == "house_suggestion") "House Suggestion" else "Housemate Wanted",
-                    modifier = Modifier.padding(horizontal = 6.dp),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold
-                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    color = if (post.type == "house_suggestion") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = if (post.type == "house_suggestion") "House Suggestion" else "Housemate Wanted",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // hero photo: real https image when present, gray box when not
-            //Box(
-            //                modifier = Modifier
-            //                    .fillMaxWidth()
-            //                    .height(180.dp)
-            //                    .clip(RoundedCornerShape(12.dp))
-            //                    .background(Color.LightGray),
-            //                contentAlignment = Alignment.Center
-            //            ) {
-            //                val cover = post.photoUrls.firstOrNull()
-            //                if (cover != null) {
-            //                    AsyncImage(
-            //                        model = cover,
-            //                        contentDescription = "Post photo",
-            //                        contentScale = ContentScale.Crop,
-            //                        modifier = Modifier.matchParentSize()
-            //                    )
-            //                } else {
-            //                    Icon(
-            //                        imageVector = Icons.Default.Image,
-            //                        contentDescription = "No photo yet",
-            //                        tint = Color.DarkGray,
-            //                        modifier = Modifier.size(48.dp)
-            //                    )
-            //                }
-            //            }
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // big title text
+            // Post Title
             Text(
                 text = post.title,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 17.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // location line: pin + address (long ones get "...")
+            // Property Name / Location
+            val propertyDisplayName = post.propertyName.ifBlank { post.location }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.LocationOn,
                     contentDescription = "Location",
                     tint = Color.Gray,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = post.location,
+                    text = propertyDisplayName,
                     color = Color.Gray,
                     fontSize = 13.sp,
                     maxLines = 1,
@@ -154,43 +139,78 @@ fun PostCard(post: Post, onClick: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // price text (no green, your call)
-            Text(
-                text = "RM ${post.priceRM.toInt()}",
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // beds + property type line
-            Text(
-                text = "${post.bedrooms} Beds • ${post.propertyType}",
-                color = Color.Gray,
-                fontSize = 14.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // footer: save button hugs the right edge
+            // 3 rounded boxes: Rent/Price, Bedrooms, Move-in Date
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
+                val priceStr = "RM${priceVal.toInt()} / month"
+                val bedroomStr = "${post.bedrooms} Bedroom"
+                val moveInStr = "Move in: ${formatMoveInDate(post.moveInDate)}"
 
-                Icon(
-                    imageVector = Icons.Default.BookmarkBorder,
-                    contentDescription = "Save post",
-                    tint = Color.Gray
+                InfoPillBox(text = priceStr, modifier = Modifier.weight(1f))
+                InfoPillBox(text = bedroomStr, modifier = Modifier.weight(1f))
+                InfoPillBox(text = moveInStr, modifier = Modifier.weight(1.2f))
+            }
+
+            // About Us / Description (only if not blank)
+            if (post.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = post.description,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                    fontSize = 13.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            // Footer: Save Bookmark Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onBookmarkClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (isSaved) "Saved post" else "Save post",
+                        tint = if (isSaved) MaterialTheme.colorScheme.primary else Color.Gray,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
     }
 }
 
+@Composable
+private fun InfoPillBox(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
+            .padding(horizontal = 6.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
 
-// turns a Firestore Timestamp into "2h ago" words
 fun relativeTime(timestamp: Timestamp): String {
     val minutesOld = (System.currentTimeMillis() - timestamp.toDate().time) / 60000
     return when {
@@ -199,4 +219,10 @@ fun relativeTime(timestamp: Timestamp): String {
         minutesOld < 1440 -> "${minutesOld / 60}h ago"
         else -> "${minutesOld / 1440}d ago"
     }
+}
+
+fun formatMoveInDate(ms: Long): String {
+    if (ms <= 0) return "Immediate"
+    val sdf = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
+    return sdf.format(Date(ms))
 }

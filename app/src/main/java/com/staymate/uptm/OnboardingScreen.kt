@@ -1,10 +1,12 @@
 package com.staymate.uptm
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -53,11 +55,14 @@ fun OnboardingScreen(
         if (uiState is OnboardingUiState.Success) onComplete()
     }
 
+    // OnboardingScreen - adding the boat floor so the keyboard stops drowning the password box
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .imePadding()                              // NEW: reserve space for the keyboard (the boat floor)
+            .verticalScroll(rememberScrollState())     // the ladder: lets a focused box climb into the dry zone
+            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.Center
     ) {
         Text("Welcome to StayMate UPTM", style = MaterialTheme.typography.headlineSmall)
@@ -70,7 +75,9 @@ fun OnboardingScreen(
             onValueChange = viewModel::onFullNameChange,
             label = { Text("Full Name") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+            ,
         )
         Spacer(Modifier.height(12.dp))
 
@@ -123,6 +130,7 @@ fun OnboardingScreen(
                 )
             }
         }
+        Spacer(Modifier.height(12.dp))
         Button(
             onClick = viewModel::submit,
             enabled = uiState !is OnboardingUiState.Saving,

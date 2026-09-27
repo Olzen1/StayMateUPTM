@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.staymate.uptm
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -95,6 +97,12 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         try {
             // throws if the user cancelled or Google Play services failed
             val account = task.getResult(Exception::class.java)
+            val email = account.email.orEmpty()
+            if (!AuthRepository().isUptmEmail(email)) {
+                googleSignInClient.signOut()
+                authViewModel.setGoogleLoginError("Please use a valid UPTM student email (@student.uptm.edu.my)")
+                return@rememberLauncherForActivityResult
+            }
             // idToken is Google's proof of login; the Firebase exchange now happens in the repository
             val idToken = account.idToken
             if (idToken != null) {
@@ -128,7 +136,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 .fillMaxWidth(0.85f)
                 .align(Alignment.Center)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 24.dp, vertical = 28.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -146,7 +154,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 text = "Log In",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A2E)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -187,7 +195,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 Text(
                     text = "Continue with Google",
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
@@ -309,7 +318,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 Text(
                     text = "Log In",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 

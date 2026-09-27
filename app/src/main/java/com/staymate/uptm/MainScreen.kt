@@ -18,8 +18,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel // function imports the ViewModel tool
 import com.staymate.uptm.repository.AuthRepository
 import com.staymate.uptm.repository.PostRepository
+import com.staymate.uptm.repository.SaveRepository
 import com.staymate.uptm.utils.UptmConstants
 import com.staymate.uptm.viewmodel.AddPostViewModelFactory
+import com.staymate.uptm.viewmodel.SaveViewModel
+import com.staymate.uptm.viewmodel.SaveViewModelFactory
+
+import com.staymate.uptm.viewmodel.SearchViewModel
+import com.staymate.uptm.viewmodel.SearchViewModelFactory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun MainScreen() {
@@ -28,11 +35,21 @@ fun MainScreen() {
     var showTypeSelector by rememberSaveable { mutableStateOf(false) } // function remembers if the Type pop-up is open
     var selectedPostType by rememberSaveable { mutableStateOf("") } // function remembers which type the user picked
     var selectedPostId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val saveViewModel: SaveViewModel = viewModel(
+        factory = SaveViewModelFactory(SaveRepository(), AuthRepository())
+    )
+    val searchViewModel: SearchViewModel = viewModel(
+        factory = SearchViewModelFactory(PostRepository())
+    )
+    val isSearchFiltering by searchViewModel.isFiltering.collectAsStateWithLifecycle()
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Content area (The TV Screen)
         Box(modifier = Modifier.fillMaxSize()) {
             when (currentRoute) { // function checks which channel we are on
                 "home" -> HomeScreen(
+                    saveViewModel = saveViewModel,
                     // function runs when a post card is tapped
                     onPostClick = { postId ->
                         // function saves the tapped post id
@@ -41,6 +58,14 @@ fun MainScreen() {
                         currentRoute = "post_details"
                     }
                 )    // function shows the home feed
+                "search" -> SearchScreen(
+                    searchViewModel = searchViewModel,
+                    saveViewModel = saveViewModel,
+                    onPostClick = { postId ->
+                        selectedPostId = postId
+                        currentRoute = "post_details"
+                    }
+                )
                 "profile" -> ProfileScreen() // function shows the profile
                 "add_post" -> AddPostScreen( // function shows the Add Post form
                     addPostViewModel = viewModel(factory = AddPostViewModelFactory(PostRepository(),
@@ -49,26 +74,28 @@ fun MainScreen() {
                     postType = selectedPostType, // function passes the chosen type to the screen
                     onNavigateBack = { currentRoute = "home" }, // function goes back to home channel
                     onPostSuccess = { currentRoute = "home" } // function goes back to home channel after posting
-                )"post_details" -> {
-                // function copies the saved id into a local safe value
-                val postId = selectedPostId
+                )
+                "post_details" -> {
+                    // function copies the saved id into a local safe value
+                    val postId = selectedPostId
 
-                // function checks there is a real post id before showing details
-                if (postId != null) {
-                    PostDetailsScreen(
-                        postId = postId,
-                        onBack = { currentRoute = "home" }
-                    )
-                } else {
-                    // function shows a fallback if the app somehow opens details with no id
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No post selected")
+                    // function checks there is a real post id before showing details
+                    if (postId != null) {
+                        PostDetailsScreen(
+                            postId = postId,
+                            saveViewModel = saveViewModel,
+                            onBack = { currentRoute = "home" }
+                        )
+                    } else {
+                        // function shows a fallback if the app somehow opens details with no id
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No post selected")
+                        }
                     }
                 }
-            }
                 else -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Screen: $currentRoute") // function shows placeholder for other screens
@@ -79,7 +106,7 @@ fun MainScreen() {
 
         // Bottom nav (The Remote Buttons)
         // function marks screens that should not show the bottom remote
-        val hideBottomNav = currentRoute == "add_post" || currentRoute == "post_details"
+        val hideBottomNav = currentRoute == "add_post" || currentRoute == "post_details" || (currentRoute == "search" && isSearchFiltering)
 
 // function shows the bottom nav only when we are not on a focus screen
         if (!hideBottomNav) { // function hides the bottom nav bar while the Add Post form is open
@@ -115,29 +142,14 @@ fun MainScreen() {
             )
         }
 
-        // Type Selector Pop-up (Pop-up Menu 2)
-        if (showTypeSelector) { // function checks if the Type pop-up should be on screen
-            AlertDialog( // function creates the pop-up box
-                onDismissRequest = { showTypeSelector = false }, // function closes pop-up if tapped outside
-                title = { Text("Select Post Type") }, // function shows the pop-up title
-                text = { Text("What kind of post is this?") }, // function shows the pop-up message
-                confirmButton = { // function holds the first choice button
-                    TextButton(onClick = { // function handles the click
-                        selectedPostType = UptmConstants.POST_TYPE_HOUSE_SUGGESTION // function saves the choice using the name tag, not a hand-typed string
-                        showTypeSelector = false // function closes the pop-up
-                        currentRoute = "add_post" // function changes channel to Add Post
-                    }) {
-                        Text("House Suggestion") // function shows button text
-                    }
-                },
-                dismissButton = { // function holds the second choice button
-                    TextButton(onClick = { // function handles the click
-                        selectedPostType = UptmConstants.POST_TYPE_HOUSEMATE_WANTED // function saves the choice using the name tag, not a hand-typed string
-                        showTypeSelector = false // function closes the pop-up
-                        currentRoute = "add_post" // function changes channel to Add Post
-                    }) {
-                        Text("Housemate Wanted") // function shows button text
-                    }
+        // Type Selector Pop-up
+        if (showTypeSelector) {
+            SelectPostTypeDialog(
+                onDismiss = { showTypeSelector = false },
+                onSelectType = { type ->
+                    selectedPostType = type
+                    showTypeSelector = false
+                    currentRoute = "add_post"
                 }
             )
         }

@@ -27,9 +27,14 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
     // NEW: Listen to Auth changes (login/logout) in real-time
     private val authListener = FirebaseAuth.AuthStateListener { auth ->
         viewModelScope.launch {
-            val uid = auth.currentUser?.uid
+            val user = auth.currentUser
+            val uid = user?.uid
+            val email = user?.email.orEmpty()
             _startupState.value = when {
-                uid == null -> StartupState.NotSignedIn
+                uid == null || !repository.isUptmEmail(email) -> {
+                    if (uid != null) repository.signOut(getApplication())
+                    StartupState.NotSignedIn
+                }
                 repository.doesUserProfileExist(uid) -> StartupState.Ready
                 else -> StartupState.NeedsOnboarding
             }
@@ -53,9 +58,14 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun checkStartup() {
         viewModelScope.launch {
-            val uid = repository.currentUid()
+            val user = FirebaseAuth.getInstance().currentUser
+            val uid = user?.uid
+            val email = user?.email.orEmpty()
             _startupState.value = when {
-                uid == null -> StartupState.NotSignedIn
+                uid == null || !repository.isUptmEmail(email) -> {
+                    if (uid != null) repository.signOut(getApplication())
+                    StartupState.NotSignedIn
+                }
                 repository.doesUserProfileExist(uid) -> StartupState.Ready
                 else -> StartupState.NeedsOnboarding
             }

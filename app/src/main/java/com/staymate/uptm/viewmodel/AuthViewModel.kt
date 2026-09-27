@@ -53,26 +53,17 @@ sealed class LoginUiState {
             }
         }
         // loginWithGoogle function handles Google login after UI gives idToken
+        // loginWithGoogle - AFTER (one engine, Result read the locked way)
         fun loginWithGoogle(idToken: String) {
-
-            // start background work
             viewModelScope.launch {
                 _loginUiState.value = LoginUiState.Loading
-                authRepository.signInWithGoogle(idToken) // repository returns Result and does NOT throw, so we read the Result object
-                    .onSuccess { _loginUiState.value = LoginUiState.Success }// onSuccess lambda runs only when Result is success
-                    .onFailure { e -> _loginUiState.value = LoginUiState.Error(e.message ?: "Google login failed") } // onFailure lambda hands us the wrapped exception
-                try {
-                    // repository sends Google idToken to Firebase
-                    // repository also checks UPTM domain after Google sign-in
-                    authRepository.signInWithGoogle(idToken)
-
-                    // if no error happened, tell UI login success
-                    _loginUiState.value = LoginUiState.Success
-
-                } catch (e: Exception) {
-                    // if Google/Firebase login fails, show error message
-                    _loginUiState.value = LoginUiState.Error(e.message ?: "Google login failed")
-                }
+                authRepository.signInWithGoogle(idToken)
+                    .onSuccess { _loginUiState.value = LoginUiState.Success }
+                    .onFailure { e -> _loginUiState.value = LoginUiState.Error(e.message ?: "Google login failed") }
             }
+        }
+
+        fun setGoogleLoginError(message: String) {
+            _loginUiState.value = LoginUiState.Error(message)
         }
     }

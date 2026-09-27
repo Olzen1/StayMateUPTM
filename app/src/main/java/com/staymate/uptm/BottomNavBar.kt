@@ -29,8 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -120,11 +122,32 @@ private fun NavItemButton(
         onClick = onClick,
         modifier = Modifier.size(48.dp)
     ) {
-        Icon(
-            item.icon,
-            contentDescription = item.label,
-            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color(0xFF9CA3AF),
-            modifier = Modifier.size(26.dp)
-        )
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
+
+            // Blue glow behind selected icon
+            if (isSelected) {
+                Icon(
+                    item.icon,
+                    contentDescription = null,
+                    tint = Color(0xFF0091FF).copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(26.dp)
+                        .blur(6.dp)
+                )
+            }
+
+            // Actual icon
+            Icon(
+                item.icon,
+                contentDescription = item.label,
+                tint = if (isSelected)
+                    MaterialTheme.colorScheme.tertiary
+                else
+                    Color(0xFF9CA3AF),
+                modifier = Modifier.size(26.dp)
+            )
+        }
     }
 }

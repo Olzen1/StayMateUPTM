@@ -65,10 +65,12 @@ object UptmConstants {
     // List of facilities for the multi-select chips
     val FACILITIES = listOf( // function makes a fixed list of house features
         "WiFi", "Air Conditioning", "Parking", "Washing Machine",
-        "Kitchen", "24hr Security", "Furnished (partially)", "Pet Friendly","Furnished (Fully)",
+        "Kitchen", "24hr Security","Pet Friendly",
         "Gym", "Badminton Court", "BBQ"
     )
-
+    val FURNISHED = listOf(
+        "Fully Furnished","Partially Furnished","No Furnishes"
+    )
     // List of bedroom counts for the dropdown (kept as text, turned into a number only when posting)
     val BEDROOM_OPTIONS = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10") // function makes a fixed list of bedroom counts
 

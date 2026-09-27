@@ -104,6 +104,11 @@ class OnboardingViewModel : ViewModel() {
             return
         }
 
+        if (!repository.isUptmEmail(email)) {
+            _uiState.value = OnboardingUiState.Error("Please use a valid UPTM student email (@student.uptm.edu.my).")
+            return
+        }
+
         _uiState.value = OnboardingUiState.Saving // tell UI to show the saving state
         viewModelScope.launch { // background work, tied to this ViewModel's life
             val profile = UserProfile(

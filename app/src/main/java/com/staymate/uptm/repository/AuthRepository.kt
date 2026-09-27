@@ -26,12 +26,27 @@ class AuthRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     fun isUptmEmail(email: String): Boolean {
-        return email.trim().endsWith(UptmConstants.EMAIL_DOMAIN, ignoreCase = true)
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isEmpty()) return false
+        val domain = cleanEmail.substringAfter("@", "")
+        return domain == "student.uptm.edu.my" ||
+               domain == "uptm.edu.my" ||
+               domain == "gapps.uptm.edu.my" ||
+               domain.endsWith(".uptm.edu.my")
     }
     suspend fun signInWithEmail(email: String, password: String): Result<String> { // sign-in ONLY: no auto-create anymore, registration lives behind the Google door now
         return try {
+            if (!isUptmEmail(email)) {
+                return Result.failure(Exception("Please use a valid UPTM student email (@student.uptm.edu.my)."))
+            }
             auth.signInWithEmailAndPassword(email, password).await() // try the existing account
-            Result.success(auth.currentUser?.uid ?: "") // hand back the uid on success
+            val user = auth.currentUser
+            if (user != null && isUptmEmail(user.email.orEmpty())) {
+                Result.success(user.uid)
+            } else {
+                auth.signOut()
+                Result.failure(Exception("Please use a valid UPTM student email (@student.uptm.edu.my)."))
+            }
         } catch (e: FirebaseAuthException) {
             when (e.errorCode) { // stable error codes from the Firebase backend
                 "ERROR_USER_NOT_FOUND", // protection OFF: email unknown
@@ -55,7 +70,7 @@ class AuthRepository {
             val user = auth.currentUser
 
             // 3. THE UPTM CHECK: Verify the email belongs to UPTM
-            if (user != null && isUptmEmail(user.email ?: "")) {
+            if (user != null && isUptmEmail(user.email.orEmpty())) {
                 Result.success(user.uid)
             } else {
                 // 4. REJECTION: If it's a personal Gmail or wrong domain, sign them out immediately!

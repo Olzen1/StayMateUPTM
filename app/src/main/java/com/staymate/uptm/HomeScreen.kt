@@ -1,8 +1,10 @@
 package com.staymate.uptm
 
+// Gate 5 - second brain + the failure sticky-note
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,9 +20,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.staymate.uptm.utils.PostNotificationHelper
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,21 +38,65 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // function imports the tool to get ViewModels in UI
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.staymate.uptm.repository.AuthRepository
 import com.staymate.uptm.repository.PostRepository
+import com.staymate.uptm.repository.SaveRepository
 import com.staymate.uptm.viewmodel.FeedUiState
 import com.staymate.uptm.viewmodel.FeedViewModel
 import com.staymate.uptm.viewmodel.FeedViewModelFactory
+import com.staymate.uptm.viewmodel.SaveToggleState
+import com.staymate.uptm.viewmodel.SaveUiState
+import com.staymate.uptm.viewmodel.SaveViewModel
+import com.staymate.uptm.viewmodel.SaveViewModelFactory
 
 @Composable
-fun HomeScreen(
-    feedViewModel: FeedViewModel = viewModel(factory = FeedViewModelFactory(PostRepository(),
-        AuthRepository())),onPostClick: (String) -> Unit = {}, // // forwards the tapped post's id upward; default = no-op until 3b wires it // function creates the Manager and gives it both Waiters
-) {
-    val feedUiState by feedViewModel.feedUiState.collectAsStateWithLifecycle() // function watches the Manager's tank and updates the UI automatically
 
+fun HomeScreen(
+    feedViewModel: FeedViewModel = viewModel(factory = FeedViewModelFactory(PostRepository(), AuthRepository())),
+    saveViewModel: SaveViewModel = viewModel(factory = SaveViewModelFactory(
+        SaveRepository(),
+        AuthRepository()
+    )
+    ),
+    onPostClick: (String) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val feedUiState by feedViewModel.feedUiState.collectAsStateWithLifecycle()
+
+// magnet-brain reads: which post ids wear a filled bookmark right now
+    val saveUiState by saveViewModel.saveUiState.collectAsStateWithLifecycle()
+    val savedIds = (saveUiState as? SaveUiState.Success)?.savedIds ?: emptySet()
+    val toggleState by saveViewModel.toggleState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var previousPostIds by remember { mutableStateOf<Set<String>?>(null) }
+
+    LaunchedEffect(feedUiState) {
+        if (feedUiState is FeedUiState.Success) {
+            val posts = (feedUiState as FeedUiState.Success).posts
+            val currentUid = AuthRepository().currentUid()
+            if (previousPostIds != null) {
+                val newPostsFromOthers = posts.filter { post ->
+                    !previousPostIds!!.contains(post.id) && post.authorUid != currentUid
+                }
+                newPostsFromOthers.forEach { newPost ->
+                    PostNotificationHelper.showNewPostNotification(context, newPost.title)
+                }
+            }
+            previousPostIds = posts.map { it.id }.toSet()
+        }
+    }
+
+// the failure sticky-note: pops up only when a save/unsave is rejected, then dissolves
+    LaunchedEffect(toggleState) {
+        val ts = toggleState                       // local-val copy: smart-cast a delegated val safely
+        if (ts is SaveToggleState.Error) {
+            snackbarHostState.showSnackbar(ts.message)
+            saveViewModel.resetToggle()            // clear it so it can't ghost on your next visit
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -127,13 +181,25 @@ fun HomeScreen(
                         val posts = (feedUiState as FeedUiState.Success).posts
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             items(posts) { post ->
-
-                                PostCard(post = post, onClick = { onPostClick(post.id) }) // // hand the id up when the card is tapped
+                                PostCard(
+                                    post = post,
+                                    onClick = { onPostClick(post.id) },
+                                    isSaved = savedIds.contains(post.id),
+                                    onBookmarkClick = { saveViewModel.toggleSave(post.id) }
+                                )
                             }
                         }
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(20.dp))
         }
+        // the snackbar floats above the bottom nav
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 70.dp)
+        )
     }
 }

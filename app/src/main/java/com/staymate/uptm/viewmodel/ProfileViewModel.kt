@@ -4,31 +4,55 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.staymate.uptm.model.UserProfile
 import com.staymate.uptm.repository.AuthRepository
+import com.staymate.uptm.repository.PostRepository
+import com.staymate.uptm.repository.SaveRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class ProfileUiState {
-    object Loading : ProfileUiState()
+    data object Loading : ProfileUiState()
     data class Success(val profile: UserProfile) : ProfileUiState()
     data class Error(val message: String) : ProfileUiState()
 }
-// function holds the small yes/no memory for the SAVE button only (separate from the load state)
+
 sealed class ProfileSaveState {
-    object Idle : ProfileSaveState()      // function nothing happening, button normal
-    object Saving : ProfileSaveState()    // function write in flight, button locked
-    object Success : ProfileSaveState()   // function write landed, dialog may close
-    data class Error(val message: String) : ProfileSaveState() // function write failed, show red words
+    data object Idle : ProfileSaveState()
+    data object Saving : ProfileSaveState()
+    data object Success : ProfileSaveState()
+    data class Error(val message: String) : ProfileSaveState()
 }
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModel : ViewModel() {
     private val repository = AuthRepository()
+    private val saveRepository = SaveRepository()
+    private val postRepository = PostRepository()
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    val userPostCount: StateFlow<Int> = repository.observeAuthUid()
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(0)
+            else postRepository.observePosts().map { posts -> posts.count { it.authorUid == uid } }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val savedPostCount: StateFlow<Int> = repository.observeAuthUid()
+        .flatMapLatest { uid ->
+            if (uid == null) flowOf(0)
+            else saveRepository.observeSavedPostIds(uid).map { it.size }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     init {
         viewModelScope.launch {
@@ -47,36 +71,31 @@ class ProfileViewModel : ViewModel() {
                 }
         }
     }
-    // function the save button's own memory, same muscle as _uiState
-    private val _saveState = MutableStateFlow<ProfileSaveState>(ProfileSaveState.Idle)
-    val saveState: StateFlow<ProfileSaveState> = _saveState.asStateFlow() // function read‑only window for the screen
 
-    // function called when the user taps Save in the edit sheet
+    private val _saveState = MutableStateFlow<ProfileSaveState>(ProfileSaveState.Idle)
+    val saveState: StateFlow<ProfileSaveState> = _saveState.asStateFlow()
+
     fun saveProfile(fullName: String, course: String, semester: String) {
-        // function lock the door while a write is already running (stops double‑tap spam)
         if (_saveState.value == ProfileSaveState.Saving) return
 
-        viewModelScope.launch { // function do the slow network work off the UI thread
-            _saveState.value = ProfileSaveState.Saving // function button goes to "Saving…"
+        viewModelScope.launch {
+            _saveState.value = ProfileSaveState.Saving
 
-            // function grab the signed‑in user's id straight from auth (the truth), not from the screen
             val uid = repository.currentUid()
-            if (uid == null) { // function nobody signed in -> cannot write
+            if (uid == null) {
                 _saveState.value = ProfileSaveState.Error("Not signed in")
-                return@launch // function stop here, do not try the write
+                return@launch
             }
 
-            // function ask the repository to fix ONLY the 3 edited lines (the correction‑pen tool from Piece 1)
             repository.updateUserProfile(uid, fullName, course, semester)
-                .onSuccess { _saveState.value = ProfileSaveState.Success } // function write landed
-                .onFailure { e -> // function write bounced (no network, rule denied, etc.)
+                .onSuccess { _saveState.value = ProfileSaveState.Success }
+                .onFailure { e ->
                     _saveState.value = ProfileSaveState.Error(e.message ?: "Could not save profile")
                 }
         }
     }
 
-    // function wipe the save memory back to normal (used when the sheet closes, so old errors don't haunt the next open)
     fun resetSave() {
         _saveState.value = ProfileSaveState.Idle
     }
-    }
+}
