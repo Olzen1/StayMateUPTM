@@ -31,6 +31,8 @@ class AddPostViewModel(
     private val _addPostUiState = MutableStateFlow<AddPostUiState>(AddPostUiState.Idle)
     val addPostUiState: StateFlow<AddPostUiState> = _addPostUiState.asStateFlow()
 
+    var editingPostId by mutableStateOf<String?>(null)
+
     // Step state: 1 = Details, 2 = Contact Information
     var currentStep by mutableIntStateOf(1)
 
@@ -39,14 +41,16 @@ class AddPostViewModel(
     var title by mutableStateOf("")
     var propertyName by mutableStateOf("")
     var location by mutableStateOf("")
-    var priceText by mutableStateOf("")
+    var priceText by mutableStateOf("") // Min Price
+    var maxPriceText by mutableStateOf("") // Max Price
     var description by mutableStateOf("")
     var propertyLink by mutableStateOf("")
     var selectedBedrooms by mutableStateOf("")
     var selectedPropertyType by mutableStateOf("")
     var selectedGender by mutableStateOf("")
     var selectedFacilities by mutableStateOf(listOf<String>())
-    var moveInDateMillis by mutableStateOf<Long?>(null)
+    var moveInDateMillis by mutableStateOf<Long?>(null) // Ready From Date
+    var moveInDateToMillis by mutableStateOf<Long?>(null) // Latest Date
     var depositText by mutableStateOf("")
     var selectedFurnished by mutableStateOf("")
     var rentPerPersonText by mutableStateOf("")
@@ -63,6 +67,38 @@ class AddPostViewModel(
         contactEmail = authRepository.currentEmail().orEmpty()
     }
 
+    fun populateForEditing(post: Post) {
+        editingPostId = post.id
+        currentStep = 1
+        postType = when (post.type) {
+            UptmConstants.POST_TYPE_KEY_SUGGESTION -> UptmConstants.POST_TYPE_HOUSE_SUGGESTION
+            UptmConstants.POST_TYPE_KEY_GROUP_FINDING -> UptmConstants.POST_TYPE_GROUP_FINDING
+            else -> UptmConstants.POST_TYPE_HOUSEMATE_WANTED
+        }
+        title = post.title
+        propertyName = post.propertyName
+        location = post.location
+        priceText = if (post.priceRM > 0) post.priceRM.toInt().toString() else ""
+        maxPriceText = if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
+        description = post.description
+        propertyLink = post.propertyLink
+        selectedBedrooms = if (post.bedrooms > 0) post.bedrooms.toString() else ""
+        selectedPropertyType = post.propertyType
+        selectedGender = post.genderPreference
+        selectedFurnished = post.furnishedStatus
+        depositText = if (post.deposit > 0) post.deposit.toInt().toString() else ""
+        rentPerPersonText = if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
+        currentHousematesText = if (post.currentHousemates > 0) post.currentHousemates.toString() else ""
+        selectedFacilities = post.facilities
+        moveInDateMillis = if (post.moveInDate > 0) post.moveInDate else null
+        contactPhone = post.contactPhone
+        contactEmail = post.contactEmail.ifBlank { authRepository.currentEmail().orEmpty() }
+        contactGender = post.contactGender.ifBlank { post.genderPreference }
+        contactWhatsapp = post.whatsappNumber
+        contactOtherInfo = post.contactOtherInfo
+        _addPostUiState.value = AddPostUiState.Idle
+    }
+
     fun toggleFacility(facility: String) {
         selectedFacilities = if (selectedFacilities.contains(facility)) {
             selectedFacilities - facility
@@ -72,13 +108,20 @@ class AddPostViewModel(
     }
 
     fun goToNextStep(): Boolean {
-        if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
-            _addPostUiState.value = AddPostUiState.Error("Please fill in all required fields in Details (Title, Property Name, Location, Price, Bedrooms, Property Type).")
-            return false
-        }
-        if (postType == UptmConstants.POST_TYPE_HOUSEMATE_WANTED && selectedGender.isBlank()) {
-            _addPostUiState.value = AddPostUiState.Error("Please choose a preferred housemate gender.")
-            return false
+        if (postType == UptmConstants.POST_TYPE_GROUP_FINDING) {
+            if (title.isBlank() || selectedGender.isBlank()) {
+                _addPostUiState.value = AddPostUiState.Error("Please fill in Title and Gender.")
+                return false
+            }
+        } else {
+            if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
+                _addPostUiState.value = AddPostUiState.Error("Please fill in all required fields in Details (Title, Property Name, Location, Price, Bedrooms, Property Type).")
+                return false
+            }
+            if (postType == UptmConstants.POST_TYPE_HOUSEMATE_WANTED && selectedGender.isBlank()) {
+                _addPostUiState.value = AddPostUiState.Error("Please choose a preferred housemate gender.")
+                return false
+            }
         }
         _addPostUiState.value = AddPostUiState.Idle
         currentStep = 2
@@ -92,11 +135,20 @@ class AddPostViewModel(
 
     fun createPost() {
         viewModelScope.launch {
-            if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
-                currentStep = 1
-                _addPostUiState.value = AddPostUiState.Error("Please fill in required fields in Details.")
-                return@launch
+            if (postType == UptmConstants.POST_TYPE_GROUP_FINDING) {
+                if (title.isBlank() || selectedGender.isBlank()) {
+                    currentStep = 1
+                    _addPostUiState.value = AddPostUiState.Error("Please fill in Title and Gender.")
+                    return@launch
+                }
+            } else {
+                if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
+                    currentStep = 1
+                    _addPostUiState.value = AddPostUiState.Error("Please fill in required fields in Details.")
+                    return@launch
+                }
             }
+
             if (contactPhone.isBlank() || contactGender.isBlank()) {
                 currentStep = 2
                 _addPostUiState.value = AddPostUiState.Error("Please fill in required Contact Information (Phone Number and Gender).")
@@ -112,28 +164,33 @@ class AddPostViewModel(
 
             val profile = authRepository.observeUserProfile(uid).first()
             val authorName = profile?.fullName ?: "StayMate User"
-            val typeKey = if (postType == UptmConstants.POST_TYPE_HOUSE_SUGGESTION) UptmConstants.POST_TYPE_KEY_SUGGESTION else UptmConstants.POST_TYPE_KEY_HOUSEMATE
+            val typeKey = when (postType) {
+                UptmConstants.POST_TYPE_HOUSE_SUGGESTION -> UptmConstants.POST_TYPE_KEY_SUGGESTION
+                UptmConstants.POST_TYPE_GROUP_FINDING -> UptmConstants.POST_TYPE_KEY_GROUP_FINDING
+                else -> UptmConstants.POST_TYPE_KEY_HOUSEMATE
+            }
 
             val post = Post(
+                id = editingPostId ?: "",
                 authorUid = uid,
                 authorName = authorName,
                 authorPhotoUrl = profile?.photoUrl ?: "",
                 type = typeKey,
                 title = title,
-                genderPreference = if (typeKey == UptmConstants.POST_TYPE_KEY_HOUSEMATE) selectedGender else "",
+                genderPreference = selectedGender,
                 propertyName = propertyName,
                 location = location,
                 priceRM = priceText.toDoubleOrNull() ?: 0.0,
                 bedrooms = selectedBedrooms.toLongOrNull() ?: 0,
                 deposit = depositText.toDoubleOrNull() ?: 0.0,
                 furnishedStatus = selectedFurnished,
-                rentPerPerson = rentPerPersonText.toDoubleOrNull() ?: 0.0,
+                rentPerPerson = if (typeKey == UptmConstants.POST_TYPE_KEY_GROUP_FINDING && maxPriceText.isNotBlank()) maxPriceText.toDoubleOrNull() ?: 0.0 else rentPerPersonText.toDoubleOrNull() ?: 0.0,
                 currentHousemates = currentHousematesText.toLongOrNull() ?: 0,
                 propertyType = selectedPropertyType,
                 propertyLink = if (typeKey == UptmConstants.POST_TYPE_KEY_SUGGESTION) propertyLink else "",
                 facilities = selectedFacilities,
-                moveInDate = if (typeKey == UptmConstants.POST_TYPE_KEY_HOUSEMATE) moveInDateMillis ?: 0 else 0,
-                description = if (typeKey == UptmConstants.POST_TYPE_KEY_HOUSEMATE) description else "",
+                moveInDate = moveInDateMillis ?: 0,
+                description = description,
                 contactPhone = contactPhone.trim(),
                 contactEmail = contactEmail.trim().ifBlank { authRepository.currentEmail().orEmpty() },
                 contactGender = contactGender,
@@ -141,7 +198,13 @@ class AddPostViewModel(
                 contactOtherInfo = contactOtherInfo.trim()
             )
 
-            postRepository.createPost(post).onSuccess {
+            val result = if (editingPostId != null) {
+                postRepository.updatePost(post)
+            } else {
+                postRepository.createPost(post)
+            }
+
+            result.onSuccess {
                 _addPostUiState.value = AddPostUiState.Success
             }.onFailure { error ->
                 _addPostUiState.value = AddPostUiState.Error(error.message ?: "Could not save the post. Try again.")
@@ -150,11 +213,13 @@ class AddPostViewModel(
     }
 
     fun resetForm() {
+        editingPostId = null
         currentStep = 1
         title = ""
         propertyName = ""
         location = ""
         priceText = ""
+        maxPriceText = ""
         description = ""
         propertyLink = ""
         selectedBedrooms = ""
@@ -166,6 +231,7 @@ class AddPostViewModel(
         currentHousematesText = ""
         selectedFacilities = emptyList()
         moveInDateMillis = null
+        moveInDateToMillis = null
         contactPhone = ""
         contactEmail = authRepository.currentEmail().orEmpty()
         contactGender = ""

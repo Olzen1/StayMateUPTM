@@ -41,7 +41,7 @@ fun SelectPostTypeDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.background,
             tonalElevation = 6.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -74,7 +74,7 @@ fun SelectPostTypeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
                     )
                 ) {
                     Row(
@@ -87,13 +87,13 @@ fun SelectPostTypeDialog(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(MaterialTheme.colorScheme.onPrimaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Home,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.primaryContainer,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -125,7 +125,7 @@ fun SelectPostTypeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
                     )
                 ) {
                     Row(
@@ -144,7 +144,7 @@ fun SelectPostTypeDialog(
                             Icon(
                                 Icons.Default.PersonSearch,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSecondary,
                                 modifier = Modifier.size(26.dp)
                             )
                         }

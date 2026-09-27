@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.staymate.uptm
 
 import androidx.compose.foundation.background
@@ -182,7 +184,7 @@ fun SearchScreen(
             }
 
             // Section Header: "Recommended Posts" when empty search/filter, else "Results"
-            val sectionTitle = if (searchQuery.isBlank() && !filterState.isActive) "Recommended Posts" else "Results"
+            val sectionTitle = if (searchQuery.isBlank() && !filterState.isActive) "Posts" else "Results"
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

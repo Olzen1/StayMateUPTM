@@ -25,15 +25,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,12 +56,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.staymate.uptm.viewmodel.ProfileSaveState
+import com.staymate.uptm.viewmodel.ProfileUiState
 import com.staymate.uptm.viewmodel.ProfileViewModel
 import com.staymate.uptm.viewmodel.RootViewModel
-import com.staymate.uptm.viewmodel.ProfileUiState
-import com.staymate.uptm.viewmodel.ProfileSaveState // function brings in the save-button memory type
+
 @Composable
 fun ProfileScreen(
+    onNavigateToSavedPosts: () -> Unit = {},
+    onNavigateToEditPosts: () -> Unit = {},
+    onNavigateToEditFindingGroup: () -> Unit = {},
     viewModel: ProfileViewModel = viewModel(),
     rootViewModel: RootViewModel = viewModel() // Shared instance from RootScreen
 ) {
@@ -118,7 +122,7 @@ fun ProfileScreen(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 4.sp,
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = colorScheme.primaryContainer,
                 modifier = Modifier.padding(top = 24.dp)
             )
         }
@@ -195,7 +199,7 @@ fun ProfileScreen(
                 text = userName,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = colorScheme.onSurface
             )
 
             // ---------- COURSE & SEMESTER (nothing until the user adds them) ----------
@@ -207,7 +211,7 @@ fun ProfileScreen(
                 Text(
                     text = details,
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = colorScheme.onSurface,
                     modifier = Modifier.clickable { showEditDialog = true }
                 )
             } else {
@@ -231,12 +235,12 @@ fun ProfileScreen(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(colorScheme.surface)
             .padding(vertical = 20.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        StatItem(postCount.toString(), "Posts", MaterialTheme.colorScheme.onSurface)
-        StatItem(savedPostCount.toString(), "Saved Post", MaterialTheme.colorScheme.onSurface)
+        StatItem(postCount.toString(), "Posts", colorScheme.onSurface)
+        StatItem(savedPostCount.toString(), "Saved Post", colorScheme.onSurface)
     }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -246,26 +250,30 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // ---------- MENU: Edit Profile / Settings / About ----------
+            // ---------- MENU: Edit Profile / Saved Post / Edit Posts ----------
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(color = MaterialTheme.colorScheme.surface)
+                    .background(color = colorScheme.surface)
                     .padding(vertical = 8.dp)
             ) {
-                MenuItem(Icons.Default.Edit, "Edit Profile", ) { showEditDialog = true }
+                MenuItem(Icons.Default.Edit, "Edit Profile") { showEditDialog = true }
                 HorizontalDivider(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.tertiary)
-                MenuItem(Icons.Default.Settings, "Settings") { /* TODO (later phase) */ }
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = colorScheme.tertiary
+                )
+                MenuItem(Icons.Default.BookmarkBorder, "Saved Post") { onNavigateToSavedPosts() }
                 HorizontalDivider(
-                    modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    ,
-                    color = MaterialTheme.colorScheme.tertiary)
-                MenuItem(Icons.Default.Info, "About StayMate UPTM") { /* TODO (later phase) */ }
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = colorScheme.tertiary
+                )
+                MenuItem(Icons.AutoMirrored.Filled.ListAlt, "Edit Posts") { onNavigateToEditPosts() }
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = colorScheme.tertiary
+                )
+                MenuItem(Icons.Default.Groups, "Edit Finding a Group") { onNavigateToEditFindingGroup() }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -275,7 +283,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(color = MaterialTheme.colorScheme.surface)
+                    .background(color = colorScheme.surface)
                     .clickable { showLogoutDialog = true }
                     .padding(vertical = 16.dp, horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -360,9 +368,9 @@ private fun decodeUriToImageBitmap(context: Context, uri: Uri, targetPx: Int): I
 @Composable
 private fun StatItem(number: String, label: String, surface: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(number, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E))
+        Text(number, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colorScheme.onSurface)
         Spacer(modifier = Modifier.height(2.dp))
-        Text(label, fontSize = 12.sp, color = Color(0xFF9CA3AF))
+        Text(label, fontSize = 12.sp, color = colorScheme.onSurface)
     }
 }
 
@@ -377,6 +385,6 @@ private fun MenuItem(icon: ImageVector, text: String, onClick: () -> Unit) {
     ) {
         Icon(icon, contentDescription = null, tint = Color(0xFF6B7280), modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.width(14.dp))
-        Text(text, fontSize = 15.sp, color = Color(0xFF1A1A2E), fontWeight = FontWeight.Medium)
+        Text(text, fontSize = 15.sp, color = colorScheme.onSurface, fontWeight = FontWeight.Medium)
     }
 }

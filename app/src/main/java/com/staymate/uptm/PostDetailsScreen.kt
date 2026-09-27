@@ -74,6 +74,7 @@ import com.staymate.uptm.viewmodel.SaveViewModelFactory
 fun PostDetailsScreen(
     postId: String,
     onBack: () -> Unit,
+    onEditClick: ((Post) -> Unit)? = null,
     detailsViewModel: PostDetailsViewModel = viewModel(
         factory = PostDetailsViewModelFactory(PostRepository())
     ),
@@ -362,6 +363,13 @@ fun PostDetailsScreen(
                             Text("No description provided.", color = MaterialTheme.colorScheme.onBackground)
                         }
 
+                        if (post.moveInDate > 0) {
+                            Text(
+                                text = "Move-in Date: ${formatMoveInDate(post.moveInDate)}",
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
                         if (post.genderPreference.isNotBlank()) {
                             Text(
                                 text = "Gender preference: ${post.genderPreference}",
@@ -378,7 +386,10 @@ fun PostDetailsScreen(
                     }
                 }
 
-                // Bottom actions: Contact & Save
+                // Bottom actions: Contact & Save/Edit
+                val currentUid = AuthRepository().currentUid()
+                val isOwner = post.authorUid == currentUid
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -392,11 +403,20 @@ fun PostDetailsScreen(
                         Text("Contact")
                     }
 
-                    OutlinedButton(
-                        onClick = { saveViewModel.toggleSave(post.id) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (savedIds.contains(post.id)) "Saved" else "Save")
+                    if (isOwner) {
+                        OutlinedButton(
+                            onClick = { onEditClick?.invoke(post) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Edit")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { saveViewModel.toggleSave(post.id) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(if (savedIds.contains(post.id)) "Saved" else "Save")
+                        }
                     }
                 }
             }

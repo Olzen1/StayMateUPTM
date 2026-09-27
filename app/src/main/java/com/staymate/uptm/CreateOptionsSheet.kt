@@ -180,14 +180,14 @@ fun CreateOptionsSheet(
                     // Text
                     Column {
                         Text(
-                            text = "Create a Group",
+                            text = "Finding a Group",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Find people to rent a house together",
+                            text = "Looking for a group or roommates to join",
                             fontSize = 12.sp,
                             color = Color(0xFF9CA3AF)
                         )

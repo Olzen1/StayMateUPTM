@@ -40,6 +40,16 @@ class PostRepository { // function creates the Waiter class
         }
     }
 
+    // Function to update an existing post
+    suspend fun updatePost(post: Post): Result<Unit> {
+        return try {
+            db.collection("posts").document(post.id).set(post).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun observePosts(): Flow<List<Post>> { // function makes a Flow that spits out a List of Posts
         return callbackFlow { // function starts a special Flow builder for Firebase listeners
             val listener = db.collection("posts") // function points to the "posts" folder

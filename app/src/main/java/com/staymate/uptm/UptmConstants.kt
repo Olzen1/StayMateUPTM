@@ -54,7 +54,8 @@ object UptmConstants {
     // List of post types the user can choose from
     const val POST_TYPE_HOUSE_SUGGESTION = "House Suggestion" // function holds the exact display label for house suggestion posts
     const val POST_TYPE_HOUSEMATE_WANTED = "Housemate Wanted" // function holds the exact display label for housemate wanted posts
-    val POST_TYPES = listOf(POST_TYPE_HOUSE_SUGGESTION, POST_TYPE_HOUSEMATE_WANTED) // function builds the dropdown list from the two name tags above
+    const val POST_TYPE_GROUP_FINDING = "Finding a Group"
+    val POST_TYPES = listOf(POST_TYPE_HOUSE_SUGGESTION, POST_TYPE_HOUSEMATE_WANTED, POST_TYPE_GROUP_FINDING) // function builds the dropdown list from the name tags above
 
     // List of property types for the dropdown
     val PROPERTY_TYPES = listOf("Studio", "Condominium", "Apartment", "Landed") // function makes a fixed list of house types
@@ -76,4 +77,5 @@ object UptmConstants {
 
     const val POST_TYPE_KEY_SUGGESTION = "house_suggestion" // function holds the locked database key for suggestion posts
     const val POST_TYPE_KEY_HOUSEMATE = "housemate_wanted" // function holds the locked database key for housemate posts
+    const val POST_TYPE_KEY_GROUP_FINDING = "group_finding"
 }

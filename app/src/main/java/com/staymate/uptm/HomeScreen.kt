@@ -60,6 +60,7 @@ fun HomeScreen(
         AuthRepository()
     )
     ),
+    onNotificationClick: () -> Unit = {},
     onPostClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -132,7 +133,7 @@ fun HomeScreen(
                 }
 
                 IconButton(
-                    onClick = { },
+                    onClick = onNotificationClick,
                     modifier = Modifier.align(Alignment.TopEnd),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = Color.LightGray,
@@ -178,15 +179,23 @@ fun HomeScreen(
                         )
                     }
                     is FeedUiState.Success -> {
-                        val posts = (feedUiState as FeedUiState.Success).posts
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(posts) { post ->
-                                PostCard(
-                                    post = post,
-                                    onClick = { onPostClick(post.id) },
-                                    isSaved = savedIds.contains(post.id),
-                                    onBookmarkClick = { saveViewModel.toggleSave(post.id) }
-                                )
+                        val posts = (feedUiState as FeedUiState.Success).posts.filter { it.type != "group_finding" }
+                        if (posts.isEmpty()) {
+                            Text(
+                                text = "No posts yet. Be the first to post!",
+                                fontSize = 14.sp,
+                                color = Color(0xFF9CA3AF)
+                            )
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(posts) { post ->
+                                    PostCard(
+                                        post = post,
+                                        onClick = { onPostClick(post.id) },
+                                        isSaved = savedIds.contains(post.id),
+                                        onBookmarkClick = { saveViewModel.toggleSave(post.id) }
+                                    )
+                                }
                             }
                         }
                     }

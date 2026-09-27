@@ -91,12 +91,21 @@ fun PostCard(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
+                val typeBadgeLabel = when (post.type) {
+                    "house_suggestion" -> "House Suggestion"
+                    "group_finding" -> "Finding a Group"
+                    else -> "Housemate Wanted"
+                }
                 Surface(
-                    color = if (post.type == "house_suggestion") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    color = when (post.type) {
+                        "house_suggestion" -> MaterialTheme.colorScheme.primaryContainer
+                        "group_finding" -> MaterialTheme.colorScheme.tertiaryContainer
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = if (post.type == "house_suggestion") "House Suggestion" else "Housemate Wanted",
+                        text = typeBadgeLabel,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -147,8 +156,12 @@ fun PostCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
-                val priceStr = "RM${priceVal.toInt()} / month"
+                val priceStr = if (post.priceRM > 0 && post.rentPerPerson > 0 && post.type == "group_finding") {
+                    "RM${post.priceRM.toInt()} - RM${post.rentPerPerson.toInt()}"
+                } else {
+                    val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
+                    "RM${priceVal.toInt()} / month"
+                }
                 val bedroomStr = "${post.bedrooms} Bedroom"
                 val moveInStr = "Move in: ${formatMoveInDate(post.moveInDate)}"
 
@@ -169,22 +182,27 @@ fun PostCard(
                 )
             }
 
-            // Footer: Save Bookmark Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBookmarkClick,
-                    modifier = Modifier.size(36.dp)
+            // Footer: Save Bookmark Button (Hidden if post belongs to current user)
+            val currentUid = com.staymate.uptm.repository.AuthRepository().currentUid()
+            val isOwner = post.authorUid == currentUid
+
+            if (!isOwner) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = if (isSaved) "Saved post" else "Save post",
-                        tint = if (isSaved) MaterialTheme.colorScheme.primary else Color.Gray,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    IconButton(
+                        onClick = onBookmarkClick,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isSaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isSaved) "Saved post" else "Save post",
+                            tint = if (isSaved) MaterialTheme.colorScheme.primary else Color.Gray,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }

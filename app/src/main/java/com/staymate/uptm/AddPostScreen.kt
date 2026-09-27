@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
@@ -43,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,6 +72,7 @@ import com.staymate.uptm.viewmodel.AddPostUiState
 import com.staymate.uptm.viewmodel.AddPostViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -83,15 +86,24 @@ fun AddPostScreen(
         addPostViewModel.postType = postType
     }
     val isHouseSuggestion = addPostViewModel.postType == UptmConstants.POST_TYPE_HOUSE_SUGGESTION
+    val isFindingGroup = addPostViewModel.postType == UptmConstants.POST_TYPE_GROUP_FINDING
     val uiState by addPostViewModel.addPostUiState.collectAsStateWithLifecycle()
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
+
+    var showFromDatePicker by remember { mutableStateOf(false) }
+    var showToDatePicker by remember { mutableStateOf(false) }
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
     LaunchedEffect(uiState) {
         if (uiState is AddPostUiState.Success) {
             addPostViewModel.resetForm()
             onPostSuccess()
         }
+    }
+
+    val topBarTitle = when {
+        isFindingGroup -> "Finding a Group Post"
+        addPostViewModel.editingPostId != null -> "Edit Post"
+        else -> "Add Post"
     }
 
     Scaffold(
@@ -103,7 +115,7 @@ fun AddPostScreen(
                     titleContentColor = colorScheme.onPrimary,
                     navigationIconContentColor = colorScheme.onPrimary
                 ),
-                title = { Text("Add Post") },
+                title = { Text(topBarTitle) },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (addPostViewModel.currentStep == 2) {
@@ -141,77 +153,232 @@ fun AddPostScreen(
                 }
             )
 
-            PostTypeBadge(isHouseSuggestion = isHouseSuggestion)
+            // NO PILL BADGE for Finding a Group!
+            if (!isFindingGroup) {
+                PostTypeBadge(isHouseSuggestion = isHouseSuggestion)
+            }
 
             if (addPostViewModel.currentStep == 1) {
                 // STEP 1: DETAILS
                 SectionLabel("DETAILS")
 
-                FormCard {
-                    OutlinedTextField(
-                        value = addPostViewModel.title,
-                        onValueChange = { addPostViewModel.title = it },
-                        label = { RequiredLabel("Post Title") },
-                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                if (isFindingGroup) {
+                    // FINDING A GROUP STEP 1 FIELDS
+                    FormCard {
+                        OutlinedTextField(
+                            value = addPostViewModel.title,
+                            onValueChange = { addPostViewModel.title = it },
+                            label = { RequiredLabel("Title") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                    OutlinedTextField(
-                        value = addPostViewModel.propertyName,
-                        onValueChange = { addPostViewModel.propertyName = it },
-                        label = { RequiredLabel("House / Property Name") },
-                        leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        UptmDropdown(
+                            label = "Gender *",
+                            options = UptmConstants.GENDER_PREFERENCES,
+                            selected = addPostViewModel.selectedGender,
+                            onSelect = { addPostViewModel.selectedGender = it }
+                        )
 
-                    OutlinedTextField(
-                        value = addPostViewModel.location,
-                        onValueChange = { addPostViewModel.location = it },
-                        label = { RequiredLabel("Location") },
-                        leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        // Price Range (RM)
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Price Range (RM)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = addPostViewModel.priceText,
-                                onValueChange = { newText ->
-                                    val onlyDigitsAndDots = newText.all { it.isDigit() || it == '.' }
-                                    val atMostOneDot = newText.count { it == '.' } <= 1
-                                    if (onlyDigitsAndDots && atMostOneDot) {
-                                        addPostViewModel.priceText = newText
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = addPostViewModel.priceText,
+                                    onValueChange = { addPostViewModel.priceText = it },
+                                    placeholder = { Text("Min", color = Color.Gray, fontSize = 14.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = colorScheme.primary,
+                                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                                    )
+                                )
+
+                                Text(
+                                    text = "to",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray
+                                )
+
+                                OutlinedTextField(
+                                    value = addPostViewModel.maxPriceText,
+                                    onValueChange = { addPostViewModel.maxPriceText = it },
+                                    placeholder = { Text("Max", color = Color.Gray, fontSize = 14.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = colorScheme.primary,
+                                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                                    )
+                                )
+                            }
+                        }
+
+                        // Move-in Date Range
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Move-in Date Range",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                val fromText = addPostViewModel.moveInDateMillis?.let { dateFormat.format(Date(it)) } ?: "Ready from"
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(52.dp)
+                                        .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+                                        .clickable { showFromDatePicker = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = fromText,
+                                            fontSize = 13.sp,
+                                            color = if (addPostViewModel.moveInDateMillis != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+                                        )
+                                        Icon(
+                                            Icons.Default.CalendarMonth,
+                                            contentDescription = "Pick date",
+                                            tint = Color.Gray
+                                        )
                                     }
-                                },
-                                label = { RequiredLabel("Price") },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                prefix = { Text("RM", color = colorScheme.onSurfaceVariant) }
-                            )
+                                }
+
+                                val toText = addPostViewModel.moveInDateToMillis?.let { dateFormat.format(Date(it)) } ?: "Latest date"
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(52.dp)
+                                        .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+                                        .clickable { showToDatePicker = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color.Transparent
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = toText,
+                                            fontSize = 13.sp,
+                                            color = if (addPostViewModel.moveInDateToMillis != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+                                        )
+                                        Icon(
+                                            Icons.Default.CalendarMonth,
+                                            contentDescription = "Pick date",
+                                            tint = Color.Gray
+                                        )
+                                    }
+                                }
+                            }
                         }
 
-                        Box(modifier = Modifier.weight(1f)) {
-                            UptmDropdown(
-                                label = "Bedrooms",
-                                options = UptmConstants.BEDROOM_OPTIONS,
-                                selected = addPostViewModel.selectedBedrooms,
-                                onSelect = { choice -> addPostViewModel.selectedBedrooms = choice }
-                            )
-                        }
+                        UptmDropdown(
+                            label = "Property Type (Optional)",
+                            options = UptmConstants.PROPERTY_TYPES,
+                            selected = addPostViewModel.selectedPropertyType,
+                            onSelect = { choice -> addPostViewModel.selectedPropertyType = choice }
+                        )
+
+                        UptmDropdown(
+                            label = "Furnished (Optional)",
+                            options = UptmConstants.FURNISHED,
+                            selected = addPostViewModel.selectedFurnished,
+                            onSelect = { choice -> addPostViewModel.selectedFurnished = choice }
+                        )
+
+                        OutlinedTextField(
+                            value = addPostViewModel.description,
+                            onValueChange = { addPostViewModel.description = it },
+                            label = { Text("Other Information (Optional)") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(110.dp),
+                            minLines = 3
+                        )
                     }
 
-                    if (!isHouseSuggestion) {
+                } else {
+                    // HOUSE SUGGESTION / HOUSEMATE WANTED FIELDS
+                    FormCard {
+                        OutlinedTextField(
+                            value = addPostViewModel.title,
+                            onValueChange = { addPostViewModel.title = it },
+                            label = { RequiredLabel("Post Title") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = addPostViewModel.propertyName,
+                            onValueChange = { addPostViewModel.propertyName = it },
+                            label = { RequiredLabel("House / Property Name") },
+                            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = addPostViewModel.location,
+                            onValueChange = { addPostViewModel.location = it },
+                            label = { RequiredLabel("Location") },
+                            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = addPostViewModel.priceText,
+                                    onValueChange = { newText ->
+                                        val onlyDigitsAndDots = newText.all { it.isDigit() || it == '.' }
+                                        val atMostOneDot = newText.count { it == '.' } <= 1
+                                        if (onlyDigitsAndDots && atMostOneDot) {
+                                            addPostViewModel.priceText = newText
+                                        }
+                                    },
+                                    label = { RequiredLabel("Price") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    prefix = { Text("RM", color = colorScheme.onSurfaceVariant) }
+                                )
+                            }
                             Box(modifier = Modifier.weight(1f)) {
                                 OutlinedTextField(
                                     value = addPostViewModel.depositText,
@@ -222,7 +389,16 @@ fun AddPostScreen(
                                     prefix = { Text("RM", color = colorScheme.onSurfaceVariant) }
                                 )
                             }
-                            Box(modifier = Modifier.weight(1f)) {
+
+
+                        }
+
+                        if (!isHouseSuggestion) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
                                 OutlinedTextField(
                                     value = addPostViewModel.currentHousematesText,
                                     onValueChange = { addPostViewModel.currentHousematesText = it },
@@ -232,121 +408,94 @@ fun AddPostScreen(
                                     singleLine = true
                                 )
                             }
+
+                                Box(modifier = Modifier.weight(1f)) {
+                                    UptmDropdown(
+                                        label = "Bedrooms",
+                                        options = UptmConstants.BEDROOM_OPTIONS,
+                                        selected = addPostViewModel.selectedBedrooms,
+                                        onSelect = { choice -> addPostViewModel.selectedBedrooms = choice }
+                                    )
+                                }
+
+                            }
+
+                            OutlinedTextField(
+                                value = addPostViewModel.rentPerPersonText,
+                                onValueChange = { addPostViewModel.rentPerPersonText = it },
+                                label = { Text("Rent Per Person (RM)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.fillMaxWidth(),
+                                prefix = { Text("RM", color = colorScheme.onSurfaceVariant) }
+                            )
                         }
 
-                        OutlinedTextField(
-                            value = addPostViewModel.rentPerPersonText,
-                            onValueChange = { addPostViewModel.rentPerPersonText = it },
-                            label = { Text("Rent Per Person (RM)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            modifier = Modifier.fillMaxWidth(),
-                            prefix = { Text("RM", color = colorScheme.onSurfaceVariant) }
+                        UptmDropdown(
+                            label = "Furnished Status",
+                            options = UptmConstants.FURNISHED,
+                            selected = addPostViewModel.selectedFurnished,
+                            onSelect = { addPostViewModel.selectedFurnished = it }
                         )
+
+                        UptmDropdown(
+                            label = "Property Type",
+                            options = UptmConstants.PROPERTY_TYPES,
+                            selected = addPostViewModel.selectedPropertyType,
+                            onSelect = { choice -> addPostViewModel.selectedPropertyType = choice }
+                        )
+
+                        if (isHouseSuggestion) {
+                            OutlinedTextField(
+                                value = addPostViewModel.propertyLink,
+                                onValueChange = { addPostViewModel.propertyLink = it },
+                                label = { Text("Link to property (PropertyGuru, iProperty, etc.)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
+                            )
+                        }
+
+                        if (!isHouseSuggestion) {
+                            UptmDropdown(
+                                label = "Preferred Housemate Gender",
+                                options = UptmConstants.GENDER_PREFERENCES,
+                                selected = addPostViewModel.selectedGender,
+                                onSelect = { choice -> addPostViewModel.selectedGender = choice }
+                            )
+                        }
                     }
 
-                    UptmDropdown(
-                        label = "Furnished Status",
-                        options = UptmConstants.FURNISHED,
-                        selected = addPostViewModel.selectedFurnished,
-                        onSelect = { addPostViewModel.selectedFurnished = it }
-                    )
-
-                    UptmDropdown(
-                        label = "Property Type",
-                        options = UptmConstants.PROPERTY_TYPES,
-                        selected = addPostViewModel.selectedPropertyType,
-                        onSelect = { choice -> addPostViewModel.selectedPropertyType = choice }
-                    )
-
-                    if (isHouseSuggestion) {
-                        OutlinedTextField(
-                            value = addPostViewModel.propertyLink,
-                            onValueChange = { addPostViewModel.propertyLink = it },
-                            label = { Text("Link to property (PropertyGuru, iProperty, etc.)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
-                        )
+                    SectionLabel("FACILITIES", counter = "${addPostViewModel.selectedFacilities.size} picked")
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        UptmConstants.FACILITIES.forEach { facility ->
+                            FilterChip(
+                                selected = addPostViewModel.selectedFacilities.contains(facility),
+                                onClick = { addPostViewModel.toggleFacility(facility) },
+                                label = { Text(facility) }
+                            )
+                        }
                     }
 
                     if (!isHouseSuggestion) {
-                        UptmDropdown(
-                            label = "Preferred Housemate Gender",
-                            options = UptmConstants.GENDER_PREFERENCES,
-                            selected = addPostViewModel.selectedGender,
-                            onSelect = { choice -> addPostViewModel.selectedGender = choice }
-                        )
-                    }
-                }
-
-                SectionLabel("FACILITIES", counter = "${addPostViewModel.selectedFacilities.size} picked")
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    UptmConstants.FACILITIES.forEach { facility ->
-                        FilterChip(
-                            selected = addPostViewModel.selectedFacilities.contains(facility),
-                            onClick = { addPostViewModel.toggleFacility(facility) },
-                            label = { Text(facility) }
-                        )
-                    }
-                }
-
-                if (!isHouseSuggestion) {
-                    Text(
-                        "Move-in Date",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    OutlinedButton(
-                        onClick = { showDatePicker = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
                         Text(
-                            text = if (addPostViewModel.moveInDateMillis != null) {
-                                SimpleDateFormat(
-                                    "d MMM yyyy",
-                                    LocalLocale.current.platformLocale
-                                ).format(Date(addPostViewModel.moveInDateMillis!!))
-                            } else {
-                                "Select date"
-                            }
+                            "About Us",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        OutlinedTextField(
+                            value = addPostViewModel.description,
+                            onValueChange = { addPostViewModel.description = it },
+                            label = { Text("Tell others about yourself, your lifestyle, preferences, etc.") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                            minLines = 4
                         )
                     }
-
-                    if (showDatePicker) {
-                        DatePickerDialog(
-                            onDismissRequest = { showDatePicker = false },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    addPostViewModel.moveInDateMillis = datePickerState.selectedDateMillis
-                                    showDatePicker = false
-                                }) { Text("OK") }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-                            }
-                        ) {
-                            DatePicker(state = datePickerState)
-                        }
-                    }
-
-                    Text(
-                        "About Us",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    OutlinedTextField(
-                        value = addPostViewModel.description,
-                        onValueChange = { addPostViewModel.description = it },
-                        label = { Text("Tell others about yourself, your lifestyle, preferences, etc.") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        minLines = 4
-                    )
                 }
 
                 if (uiState is AddPostUiState.Error) {
@@ -455,11 +604,52 @@ fun AddPostScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Post", style = MaterialTheme.typography.titleMedium)
+                            Text(if (addPostViewModel.editingPostId != null) "Edit Post" else "Post", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
             }
+        }
+    }
+
+    // DatePicker dialogs for Finding a Group date range
+    if (showFromDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = addPostViewModel.moveInDateMillis ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showFromDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    addPostViewModel.moveInDateMillis = datePickerState.selectedDateMillis
+                    showFromDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFromDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showToDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = addPostViewModel.moveInDateToMillis ?: System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showToDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    addPostViewModel.moveInDateToMillis = datePickerState.selectedDateMillis
+                    showToDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showToDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

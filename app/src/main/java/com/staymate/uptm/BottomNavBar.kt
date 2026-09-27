@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.offset
+import androidx.compose.material.icons.filled.Groups
+
 data class NavItem(
     val label: String,
     val icon: ImageVector,
@@ -48,7 +50,7 @@ val navItems = listOf(
     NavItem("Home", Icons.Default.Home, "home"),
     NavItem("Search", Icons.Default.Search, "search"),
     NavItem("Add", Icons.Default.Add, "add"),
-    NavItem("Message", Icons.Default.Chat, "message"),
+    NavItem("Group", Icons.Default.Groups, "group"),
     NavItem("Profile", Icons.Default.Person, "profile")
 )
 
