@@ -136,14 +136,14 @@ fun HomeScreen(
                     onClick = onNotificationClick,
                     modifier = Modifier.align(Alignment.TopEnd),
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color.LightGray,
+                        containerColor = colorScheme.surface,
                         contentColor = Color.Red
                     )
                 ) {
                     Icon(
                         Icons.Default.Notifications,
                         contentDescription = "Notifications",
-                        tint = MaterialTheme.colorScheme.surface,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0x33FFFFFF))

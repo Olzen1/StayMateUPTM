@@ -53,7 +53,7 @@ fun EditFindingGroupScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                title = { Text("Edit Finding a Group", fontWeight = FontWeight.Bold) },
+                title = { Text("Group", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

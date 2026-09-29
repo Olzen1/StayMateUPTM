@@ -25,11 +25,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +74,8 @@ import com.staymate.uptm.viewmodel.PostDetailsViewModelFactory
 import com.staymate.uptm.viewmodel.SaveUiState
 import com.staymate.uptm.viewmodel.SaveViewModel
 import com.staymate.uptm.viewmodel.SaveViewModelFactory
-
+import kotlinx.coroutines.launch
+import com.staymate.uptm.viewmodel.AddPostViewModel
 @Composable
 fun PostDetailsScreen(
     postId: String,
@@ -92,6 +98,14 @@ fun PostDetailsScreen(
 
     var showMenu by remember { mutableStateOf(false) }
     var showContactDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val coroutineScope = rememberCoroutineScope()
+    val currentUid = AuthRepository().currentUid()
+    val currentPost = (uiState as? PostDetailsUiState.Success)?.post
+    val isOwner = currentPost != null && currentPost.authorUid == currentUid
 
     Column(
         modifier = Modifier
@@ -125,16 +139,42 @@ fun PostDetailsScreen(
             )
 
             Box(
-                modifier = Modifier
-                    .clickable { showMenu = true }
-                    .padding(8.dp),
+                modifier = Modifier.padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "⋮",
                     fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.clickable { showMenu = true }
                 )
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    if (isOwner || onEditClick != null) {
+                        DropdownMenuItem(
+                            text = { Text("Delete Post", color = Color.Red, fontWeight = FontWeight.Bold) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) },
+                            onClick = {
+                                showMenu = false
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
+                    if (!isOwner) {
+                        DropdownMenuItem(
+                            text = { Text("Report", color = Color(0xFFFF9800), fontWeight = FontWeight.Bold) },
+                            leadingIcon = { Icon(Icons.Default.Warning, contentDescription = "Report", tint = Color(0xFFFF9800)) },
+                            onClick = {
+                                showMenu = false
+                                showReportDialog = true
+                            }
+                        )
+                    }
+                }
             }
         }
 
@@ -183,6 +223,67 @@ fun PostDetailsScreen(
                     ContactInfoDialog(
                         post = post,
                         onDismiss = { showContactDialog = false }
+                    )
+                }
+
+                if (showDeleteDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDeleteDialog = false },
+                        title = { Text("Delete Post", fontWeight = FontWeight.Bold) },
+                        text = { Text("Are you sure you want to delete this post? This action cannot be undone.") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showDeleteDialog = false
+                                    coroutineScope.launch {
+                                        if (post.id.isNotBlank()) {
+                                            val result = PostRepository().deletePost(post.id)
+                                            result.onSuccess {
+                                                onBack()
+                                            }.onFailure { e ->
+                                                android.util.Log.e("StayMateDelete", "Failed to delete post: ${e.message}", e)
+                                                onBack()
+                                            }
+                                        } else {
+                                            onBack()
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                            ) {
+                                Text("Delete", color = Color.White)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
+
+                if (showReportDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showReportDialog = false },
+                        title = { Text("Are you sure to report this post?", fontWeight = FontWeight.Bold) },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showReportDialog = false
+                                    coroutineScope.launch {
+                                        PostRepository().reportPost(post.id, post.title, currentUid ?: "")
+                                        android.widget.Toast.makeText(context, "Post reported successfully.", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            ) {
+                                Text("Yes", fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showReportDialog = false }) {
+                                Text("No")
+                            }
+                        }
                     )
                 }
 
@@ -239,11 +340,20 @@ fun PostDetailsScreen(
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
-                                color = if (post.type == "house_suggestion") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                                color = when (post.type) {
+                                    "house_suggestion" -> MaterialTheme.colorScheme.primaryContainer
+                                    "group_finding" -> MaterialTheme.colorScheme.tertiaryContainer
+                                    else -> MaterialTheme.colorScheme.secondaryContainer
+                                },
                                 shape = RoundedCornerShape(8.dp)
                             ) {
+                                val labelText = when (post.type) {
+                                    "house_suggestion" -> "House Suggestion"
+                                    "group_finding" -> "Finding a Group"
+                                    else -> "Housemate Wanted"
+                                }
                                 Text(
-                                    text = if (post.type == "house_suggestion") "House Suggestion" else "Housemate Wanted",
+                                    text = labelText,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -279,8 +389,14 @@ fun PostDetailsScreen(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
+                            val priceDisplay = if (post.priceRM > 0 && post.rentPerPerson > 0 && post.type == "group_finding") {
+                                "RM${post.priceRM.toInt()} - RM${post.rentPerPerson.toInt()}"
+                            } else {
+                                "RM ${priceVal.toInt()}"
+                            }
                             Text(
-                                text = "RM ${post.priceRM.toInt()}",
+                                text = priceDisplay,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
@@ -321,6 +437,13 @@ fun PostDetailsScreen(
                             }
                         }
 
+                        if (post.moveInDate > 0) {
+                            Text(
+                                text = "Move-in Date: ${formatMoveInDate(post.moveInDate)}",
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
                         if (post.furnishedStatus.isNotBlank()) {
                             Text(
                                 text = "Furnished: ${post.furnishedStatus}",
@@ -352,7 +475,7 @@ fun PostDetailsScreen(
                         }
 
                         Text(
-                            text = "About Us",
+                            text = "    About Us / Information",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
@@ -361,13 +484,6 @@ fun PostDetailsScreen(
                             Text(post.description, color = MaterialTheme.colorScheme.onBackground)
                         } else {
                             Text("No description provided.", color = MaterialTheme.colorScheme.onBackground)
-                        }
-
-                        if (post.moveInDate > 0) {
-                            Text(
-                                text = "Move-in Date: ${formatMoveInDate(post.moveInDate)}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
                         }
 
                         if (post.genderPreference.isNotBlank()) {
@@ -387,9 +503,6 @@ fun PostDetailsScreen(
                 }
 
                 // Bottom actions: Contact & Save/Edit
-                val currentUid = AuthRepository().currentUid()
-                val isOwner = post.authorUid == currentUid
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -403,7 +516,7 @@ fun PostDetailsScreen(
                         Text("Contact")
                     }
 
-                    if (isOwner) {
+                    if (isOwner || onEditClick != null) {
                         OutlinedButton(
                             onClick = { onEditClick?.invoke(post) },
                             modifier = Modifier.weight(1f)
@@ -421,19 +534,6 @@ fun PostDetailsScreen(
                 }
             }
         }
-    }
-
-    if (showMenu) {
-        AlertDialog(
-            onDismissRequest = { showMenu = false },
-            title = { Text("Post options") },
-            text = { Text("Report post is a stub for now.") },
-            confirmButton = {
-                TextButton(onClick = { showMenu = false }) {
-                    Text("Close")
-                }
-            }
-        )
     }
 
     BackHandler {

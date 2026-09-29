@@ -5,6 +5,7 @@ data class UserProfile(
     val fullName: String = "",
     val email: String = "",
     val course: String = "",
+
     val semester: String = "",
     val photoUrl: String = "",
     val createdAt: Long = System.currentTimeMillis()

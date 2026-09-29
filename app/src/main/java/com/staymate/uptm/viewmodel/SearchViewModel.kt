@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
@@ -50,15 +51,17 @@ class SearchViewModel(
     val isFiltering: StateFlow<Boolean> = _isFiltering.asStateFlow()
 
     val searchUiState: StateFlow<SearchUiState> = combine(
-        postRepository.observePosts(),
+        postRepository.observePosts().catch { emit(emptyList()) },
         _searchQuery,
         _filterState
     ) { posts, query, filters ->
         val filtered = posts.filter { post ->
             matchesQuery(post, query) && matchesFilters(post, filters)
         }
-        SearchUiState.Success(filtered)
-    }.stateIn(
+        val state: SearchUiState = SearchUiState.Success(filtered)
+        state
+    }.catch { emit(SearchUiState.Error(it.message ?: "Search error")) }
+    .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = SearchUiState.Loading

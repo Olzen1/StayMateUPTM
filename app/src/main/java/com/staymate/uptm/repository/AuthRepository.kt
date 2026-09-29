@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlin.collections.remove
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+@Suppress("DEPRECATION")
 class AuthRepository {
 
 
@@ -32,14 +33,38 @@ class AuthRepository {
         return domain == "student.uptm.edu.my" ||
                domain == "uptm.edu.my" ||
                domain == "gapps.uptm.edu.my" ||
+               domain == "admin.uptm.edu.my" ||
                domain.endsWith(".uptm.edu.my")
+    }
+
+    fun isAdminEmail(email: String): Boolean {
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isEmpty()) return false
+        return cleanEmail == "admin@admin.uptm.edu.my" ||
+               cleanEmail.startsWith("admin@") ||
+               cleanEmail.endsWith("@admin.uptm.edu.my")
     }
     suspend fun signInWithEmail(email: String, password: String): Result<String> { // sign-in ONLY: no auto-create anymore, registration lives behind the Google door now
         return try {
-            if (!isUptmEmail(email)) {
+            val cleanEmail = email.trim()
+            // admin login — never hand back a fake badge; only a REAL session, or an honest failure
+            // admin login — the app holds NO copy of the password; Firebase Auth checks it server-side
+            if (cleanEmail.equals("admin@admin.uptm.edu.my", ignoreCase = true)) {
+                return try {
+                    auth.signInWithEmailAndPassword(cleanEmail, password).await()
+                    val realUid = auth.currentUser?.uid
+                    if (realUid != null) Result.success(realUid)
+                    else Result.failure(Exception("Admin session did not stick. Try again."))
+                } catch (e: Exception) {
+                    // wrong password / no such account / network: ONE honest failure, no fake badge
+                    Result.failure(Exception("Wrong admin email or password."))
+                }
+            }
+
+            if (!isUptmEmail(cleanEmail)) {
                 return Result.failure(Exception("Please use a valid UPTM student email (@student.uptm.edu.my)."))
             }
-            auth.signInWithEmailAndPassword(email, password).await() // try the existing account
+            auth.signInWithEmailAndPassword(cleanEmail, password).await() // try the existing account
             val user = auth.currentUser
             if (user != null && isUptmEmail(user.email.orEmpty())) {
                 Result.success(user.uid)
@@ -145,10 +170,23 @@ class AuthRepository {
         val listener = firestore.collection("users").document(uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(null)
                     return@addSnapshotListener
                 }
                 trySend(snapshot?.toObject(UserProfile::class.java))
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun observeAllUsers(): Flow<List<UserProfile>> = callbackFlow {
+        val listener = firestore.collection("users")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val usersList = snapshot?.toObjects(UserProfile::class.java) ?: emptyList()
+                trySend(usersList)
             }
         awaitClose { listener.remove() }
     }

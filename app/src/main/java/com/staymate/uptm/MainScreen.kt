@@ -106,8 +106,8 @@ fun MainScreen() {
                 "edit_post_form" -> AddPostScreen(
                     addPostViewModel = addPostViewModel,
                     postType = selectedPostType,
-                    onNavigateBack = { currentRoute = "edit_posts" },
-                    onPostSuccess = { currentRoute = "edit_posts" }
+                    onNavigateBack = { currentRoute = "profile" },
+                    onPostSuccess = { currentRoute = "profile" }
                 )
                 "add_post" -> AddPostScreen(
                     addPostViewModel = addPostViewModel,
@@ -120,7 +120,10 @@ fun MainScreen() {
                     if (postId != null) {
                         PostDetailsScreen(
                             postId = postId,
-                            onBack = { currentRoute = "home" },
+                            onBack = {
+                                selectedPostId = null
+                                currentRoute = "home"
+                            },
                             onEditClick = { post ->
                                 addPostViewModel.populateForEditing(post)
                                 selectedPostType = if (post.type == UptmConstants.POST_TYPE_KEY_SUGGESTION) {

@@ -45,6 +45,7 @@ class ProfileViewModel : ViewModel() {
             if (uid == null) flowOf(0)
             else postRepository.observePosts().map { posts -> posts.count { it.authorUid == uid } }
         }
+        .catch { emit(0) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val savedPostCount: StateFlow<Int> = repository.observeAuthUid()
@@ -52,6 +53,7 @@ class ProfileViewModel : ViewModel() {
             if (uid == null) flowOf(0)
             else saveRepository.observeSavedPostIds(uid).map { it.size }
         }
+        .catch { emit(0) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     init {

@@ -18,7 +18,7 @@ class SaveRepository(
             .whereEqualTo("uid", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptySet())
                     return@addSnapshotListener
                 }
                 val saves = snapshot?.toObjects(Save::class.java) ?: emptyList()

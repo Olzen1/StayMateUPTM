@@ -73,7 +73,7 @@ object UptmConstants {
         "Fully Furnished","Partially Furnished","No Furnishes"
     )
     // List of bedroom counts for the dropdown (kept as text, turned into a number only when posting)
-    val BEDROOM_OPTIONS = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10") // function makes a fixed list of bedroom counts
+    val BEDROOM_OPTIONS = listOf("1", "2", "3", "4", "5") // function makes a fixed list of bedroom counts
 
     const val POST_TYPE_KEY_SUGGESTION = "house_suggestion" // function holds the locked database key for suggestion posts
     const val POST_TYPE_KEY_HOUSEMATE = "housemate_wanted" // function holds the locked database key for housemate posts

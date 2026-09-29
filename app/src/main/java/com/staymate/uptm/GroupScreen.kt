@@ -58,7 +58,7 @@ fun GroupScreen(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "GROUP",
+                text = "FIND YOUR GROUP",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,

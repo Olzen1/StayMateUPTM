@@ -150,7 +150,7 @@ fun PostCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 3 rounded boxes: Rent/Price, Bedrooms, Move-in Date
+            // Rounded boxes: Rent/Price, Bedrooms (omitted for finding a group), Move-in Date
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -162,11 +162,13 @@ fun PostCard(
                     val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
                     "RM${priceVal.toInt()} / month"
                 }
-                val bedroomStr = "${post.bedrooms} Bedroom"
                 val moveInStr = "Move in: ${formatMoveInDate(post.moveInDate)}"
 
                 InfoPillBox(text = priceStr, modifier = Modifier.weight(1f))
-                InfoPillBox(text = bedroomStr, modifier = Modifier.weight(1f))
+                if (post.type != "group_finding") {
+                    val bedroomStr = "${post.bedrooms} Bedroom"
+                    InfoPillBox(text = bedroomStr, modifier = Modifier.weight(1f))
+                }
                 InfoPillBox(text = moveInStr, modifier = Modifier.weight(1.2f))
             }
 

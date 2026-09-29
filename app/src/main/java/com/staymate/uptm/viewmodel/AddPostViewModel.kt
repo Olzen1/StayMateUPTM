@@ -4,7 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+
 import androidx.lifecycle.viewModelScope
 import com.staymate.uptm.model.Post
 import com.staymate.uptm.repository.AuthRepository
@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import android.content.Context
+import androidx.lifecycle.ViewModel
+
 
 sealed interface AddPostUiState {
     data object Idle : AddPostUiState
@@ -22,19 +25,28 @@ sealed interface AddPostUiState {
     data object Success : AddPostUiState
     data class Error(val message: String) : AddPostUiState
 }
-
 class AddPostViewModel(
     private val postRepository: PostRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
-
+    var photoError by mutableStateOf<String?>(null)
     private val _addPostUiState = MutableStateFlow<AddPostUiState>(AddPostUiState.Idle)
     val addPostUiState: StateFlow<AddPostUiState> = _addPostUiState.asStateFlow()
 
     var editingPostId by mutableStateOf<String?>(null)
+    var editingAuthorUid by mutableStateOf<String?>(null)
+    var editingAuthorName by mutableStateOf<String?>(null)
+    var editingAuthorPhotoUrl by mutableStateOf<String?>(null)
+    var editingCreatedAt by mutableStateOf<com.google.firebase.Timestamp?>(null)
 
     // Step state: 1 = Details, 2 = Contact Information
     var currentStep by mutableIntStateOf(1)
+
+    // Photo memory
+    var photoUrl by mutableStateOf<String?>(null)
+
+    var photoPublicId by mutableStateOf<String?>(null)
+    var isUploadingPhoto by mutableStateOf(false)
 
     // Form fields - Step 1: Details
     var postType by mutableStateOf("")
@@ -69,6 +81,10 @@ class AddPostViewModel(
 
     fun populateForEditing(post: Post) {
         editingPostId = post.id
+        editingAuthorUid = post.authorUid
+        editingAuthorName = post.authorName
+        editingAuthorPhotoUrl = post.authorPhotoUrl
+        editingCreatedAt = post.createdAt
         currentStep = 1
         postType = when (post.type) {
             UptmConstants.POST_TYPE_KEY_SUGGESTION -> UptmConstants.POST_TYPE_HOUSE_SUGGESTION
@@ -87,8 +103,10 @@ class AddPostViewModel(
         selectedGender = post.genderPreference
         selectedFurnished = post.furnishedStatus
         depositText = if (post.deposit > 0) post.deposit.toInt().toString() else ""
-        rentPerPersonText = if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
-        currentHousematesText = if (post.currentHousemates > 0) post.currentHousemates.toString() else ""
+        rentPerPersonText =
+            if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
+        currentHousematesText =
+            if (post.currentHousemates > 0) post.currentHousemates.toString() else ""
         selectedFacilities = post.facilities
         moveInDateMillis = if (post.moveInDate > 0) post.moveInDate else null
         contactPhone = post.contactPhone
@@ -97,6 +115,7 @@ class AddPostViewModel(
         contactWhatsapp = post.whatsappNumber
         contactOtherInfo = post.contactOtherInfo
         _addPostUiState.value = AddPostUiState.Idle
+        photoUrl = post.photoUrls.firstOrNull()
     }
 
     fun toggleFacility(facility: String) {
@@ -115,11 +134,13 @@ class AddPostViewModel(
             }
         } else {
             if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
-                _addPostUiState.value = AddPostUiState.Error("Please fill in all required fields in Details (Title, Property Name, Location, Price, Bedrooms, Property Type).")
+                _addPostUiState.value =
+                    AddPostUiState.Error("Please fill in all required fields in Details (Title, Property Name, Location, Price, Bedrooms, Property Type).")
                 return false
             }
             if (postType == UptmConstants.POST_TYPE_HOUSEMATE_WANTED && selectedGender.isBlank()) {
-                _addPostUiState.value = AddPostUiState.Error("Please choose a preferred housemate gender.")
+                _addPostUiState.value =
+                    AddPostUiState.Error("Please choose a preferred housemate gender.")
                 return false
             }
         }
@@ -144,21 +165,24 @@ class AddPostViewModel(
             } else {
                 if (title.isBlank() || propertyName.isBlank() || location.isBlank() || priceText.isBlank() || selectedBedrooms.isBlank() || selectedPropertyType.isBlank()) {
                     currentStep = 1
-                    _addPostUiState.value = AddPostUiState.Error("Please fill in required fields in Details.")
+                    _addPostUiState.value =
+                        AddPostUiState.Error("Please fill in required fields in Details.")
                     return@launch
                 }
             }
 
             if (contactPhone.isBlank() || contactGender.isBlank()) {
                 currentStep = 2
-                _addPostUiState.value = AddPostUiState.Error("Please fill in required Contact Information (Phone Number and Gender).")
+                _addPostUiState.value =
+                    AddPostUiState.Error("Please fill in required Contact Information (Phone Number and Gender).")
                 return@launch
             }
 
             _addPostUiState.value = AddPostUiState.Saving
             val uid = authRepository.currentUid()
             if (uid == null) {
-                _addPostUiState.value = AddPostUiState.Error("You are not logged in anymore. Please login again.")
+                _addPostUiState.value =
+                    AddPostUiState.Error("You are not logged in anymore. Please login again.")
                 return@launch
             }
 
@@ -172,9 +196,9 @@ class AddPostViewModel(
 
             val post = Post(
                 id = editingPostId ?: "",
-                authorUid = uid,
-                authorName = authorName,
-                authorPhotoUrl = profile?.photoUrl ?: "",
+                authorUid = if (editingPostId != null && !editingAuthorUid.isNullOrBlank()) editingAuthorUid!! else uid,
+                authorName = if (editingPostId != null && !editingAuthorName.isNullOrBlank()) editingAuthorName!! else authorName,
+                authorPhotoUrl = if (editingPostId != null && editingAuthorPhotoUrl != null) editingAuthorPhotoUrl!! else (profile?.photoUrl ?: ""),
                 type = typeKey,
                 title = title,
                 genderPreference = selectedGender,
@@ -184,18 +208,22 @@ class AddPostViewModel(
                 bedrooms = selectedBedrooms.toLongOrNull() ?: 0,
                 deposit = depositText.toDoubleOrNull() ?: 0.0,
                 furnishedStatus = selectedFurnished,
-                rentPerPerson = if (typeKey == UptmConstants.POST_TYPE_KEY_GROUP_FINDING && maxPriceText.isNotBlank()) maxPriceText.toDoubleOrNull() ?: 0.0 else rentPerPersonText.toDoubleOrNull() ?: 0.0,
+                rentPerPerson = if (typeKey == UptmConstants.POST_TYPE_KEY_GROUP_FINDING && maxPriceText.isNotBlank()) maxPriceText.toDoubleOrNull()
+                    ?: 0.0 else rentPerPersonText.toDoubleOrNull() ?: 0.0,
                 currentHousemates = currentHousematesText.toLongOrNull() ?: 0,
                 propertyType = selectedPropertyType,
                 propertyLink = if (typeKey == UptmConstants.POST_TYPE_KEY_SUGGESTION) propertyLink else "",
                 facilities = selectedFacilities,
                 moveInDate = moveInDateMillis ?: 0,
+                createdAt = editingCreatedAt ?: com.google.firebase.Timestamp.now(),
                 description = description,
                 contactPhone = contactPhone.trim(),
-                contactEmail = contactEmail.trim().ifBlank { authRepository.currentEmail().orEmpty() },
+                contactEmail = contactEmail.trim()
+                    .ifBlank { authRepository.currentEmail().orEmpty() },
                 contactGender = contactGender,
                 whatsappNumber = contactWhatsapp.trim().ifBlank { contactPhone.trim() },
-                contactOtherInfo = contactOtherInfo.trim()
+                contactOtherInfo = contactOtherInfo.trim(),
+                photoUrls = listOfNotNull(photoUrl),   // the photo finally travels into the doc
             )
 
             val result = if (editingPostId != null) {
@@ -207,13 +235,18 @@ class AddPostViewModel(
             result.onSuccess {
                 _addPostUiState.value = AddPostUiState.Success
             }.onFailure { error ->
-                _addPostUiState.value = AddPostUiState.Error(error.message ?: "Could not save the post. Try again.")
+                _addPostUiState.value =
+                    AddPostUiState.Error(error.message ?: "Could not save the post. Try again.")
             }
         }
     }
 
     fun resetForm() {
         editingPostId = null
+        editingAuthorUid = null
+        editingAuthorName = null
+        editingAuthorPhotoUrl = null
+        editingCreatedAt = null
         currentStep = 1
         title = ""
         propertyName = ""
@@ -238,5 +271,11 @@ class AddPostViewModel(
         contactWhatsapp = ""
         contactOtherInfo = ""
         _addPostUiState.value = AddPostUiState.Idle
+        photoUrl = null
+        isUploadingPhoto = false
+        photoPublicId = null
+
+        photoError = null
+
     }
 }

@@ -1,5 +1,6 @@
 package com.staymate.uptm
 
+// base-android tools to read the slip and write a real file
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -88,7 +88,6 @@ fun AddPostScreen(
     val isHouseSuggestion = addPostViewModel.postType == UptmConstants.POST_TYPE_HOUSE_SUGGESTION
     val isFindingGroup = addPostViewModel.postType == UptmConstants.POST_TYPE_GROUP_FINDING
     val uiState by addPostViewModel.addPostUiState.collectAsStateWithLifecycle()
-
     var showFromDatePicker by remember { mutableStateOf(false) }
     var showToDatePicker by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
@@ -101,9 +100,12 @@ fun AddPostScreen(
     }
 
     val topBarTitle = when {
-        isFindingGroup -> "Finding a Group Post"
+        isFindingGroup -> "Create a Group Post"
         addPostViewModel.editingPostId != null -> "Edit Post"
-        else -> "Add Post"
+        else ->
+            if (isHouseSuggestion){"Add Post - House Suggestion"} else {
+                "Add Post - Housemate Wanted"
+            }
     }
 
     Scaffold(
@@ -152,12 +154,6 @@ fun AddPostScreen(
                     }
                 }
             )
-
-            // NO PILL BADGE for Finding a Group!
-            if (!isFindingGroup) {
-                PostTypeBadge(isHouseSuggestion = isHouseSuggestion)
-            }
-
             if (addPostViewModel.currentStep == 1) {
                 // STEP 1: DETAILS
                 SectionLabel("DETAILS")
@@ -168,7 +164,7 @@ fun AddPostScreen(
                         OutlinedTextField(
                             value = addPostViewModel.title,
                             onValueChange = { addPostViewModel.title = it },
-                            label = { RequiredLabel("Title") },
+                            label = { Text("Title") },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -187,7 +183,7 @@ fun AddPostScreen(
                                 text = "Price Range (RM)",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = colorScheme.onSurface
                             )
 
                             Row(
@@ -238,7 +234,7 @@ fun AddPostScreen(
                                 text = "Move-in Date Range",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = colorScheme.onSurface
                             )
 
                             Row(
@@ -263,7 +259,7 @@ fun AddPostScreen(
                                         Text(
                                             text = fromText,
                                             fontSize = 13.sp,
-                                            color = if (addPostViewModel.moveInDateMillis != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+                                            color = if (addPostViewModel.moveInDateMillis != null) colorScheme.onSurface else Color.Gray
                                         )
                                         Icon(
                                             Icons.Default.CalendarMonth,
@@ -291,7 +287,7 @@ fun AddPostScreen(
                                         Text(
                                             text = toText,
                                             fontSize = 13.sp,
-                                            color = if (addPostViewModel.moveInDateToMillis != null) MaterialTheme.colorScheme.onSurface else Color.Gray
+                                            color = if (addPostViewModel.moveInDateToMillis != null) colorScheme.onSurface else Color.Gray
                                         )
                                         Icon(
                                             Icons.Default.CalendarMonth,
@@ -334,7 +330,7 @@ fun AddPostScreen(
                         OutlinedTextField(
                             value = addPostViewModel.title,
                             onValueChange = { addPostViewModel.title = it },
-                            label = { RequiredLabel("Post Title") },
+                            label = { Text("Post Title *") },
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -343,7 +339,7 @@ fun AddPostScreen(
                         OutlinedTextField(
                             value = addPostViewModel.propertyName,
                             onValueChange = { addPostViewModel.propertyName = it },
-                            label = { RequiredLabel("House / Property Name") },
+                            label = {Text("House / Property Name *") },
                             leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -352,7 +348,7 @@ fun AddPostScreen(
                         OutlinedTextField(
                             value = addPostViewModel.location,
                             onValueChange = { addPostViewModel.location = it },
-                            label = { RequiredLabel("Location") },
+                            label = { Text("Location *") },
                             leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -372,7 +368,7 @@ fun AddPostScreen(
                                             addPostViewModel.priceText = newText
                                         }
                                     },
-                                    label = { RequiredLabel("Price") },
+                                    label = { Text("Price *") },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -399,27 +395,27 @@ fun AddPostScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Box(modifier = Modifier.weight(1f)) {
-                                OutlinedTextField(
-                                    value = addPostViewModel.currentHousematesText,
-                                    onValueChange = { addPostViewModel.currentHousematesText = it },
-                                    label = { Text("Current Roommates") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true
-                                )
-                            }
-
-                                Box(modifier = Modifier.weight(1f)) {
-                                    UptmDropdown(
-                                        label = "Bedrooms",
-                                        options = UptmConstants.BEDROOM_OPTIONS,
-                                        selected = addPostViewModel.selectedBedrooms,
-                                        onSelect = { choice -> addPostViewModel.selectedBedrooms = choice }
+                                    OutlinedTextField(
+                                        value = addPostViewModel.currentHousematesText,
+                                        onValueChange = {
+                                            addPostViewModel.currentHousematesText = it
+                                        },
+                                        label = { Text("Current Roommates") },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true
                                     )
                                 }
-
                             }
+                        }
+                        UptmDropdown(
+                            label = "Bedrooms *",
+                            options = UptmConstants.BEDROOM_OPTIONS,
+                            selected = addPostViewModel.selectedBedrooms,
+                            onSelect = { choice -> addPostViewModel.selectedBedrooms = choice }
+                        )
 
+                        if (!isHouseSuggestion) {
                             OutlinedTextField(
                                 value = addPostViewModel.rentPerPersonText,
                                 onValueChange = { addPostViewModel.rentPerPersonText = it },
@@ -430,19 +426,22 @@ fun AddPostScreen(
                             )
                         }
 
-                        UptmDropdown(
-                            label = "Furnished Status",
-                            options = UptmConstants.FURNISHED,
-                            selected = addPostViewModel.selectedFurnished,
-                            onSelect = { addPostViewModel.selectedFurnished = it }
-                        )
+                            UptmDropdown(
+                                label = "Furnished Status *",
+                                options = UptmConstants.FURNISHED,
+                                selected = addPostViewModel.selectedFurnished,
+                                onSelect = { addPostViewModel.selectedFurnished = it }
+                            )
 
-                        UptmDropdown(
-                            label = "Property Type",
-                            options = UptmConstants.PROPERTY_TYPES,
-                            selected = addPostViewModel.selectedPropertyType,
-                            onSelect = { choice -> addPostViewModel.selectedPropertyType = choice }
-                        )
+
+                            UptmDropdown(
+                                label = "Property Type *",
+                                options = UptmConstants.PROPERTY_TYPES,
+                                selected = addPostViewModel.selectedPropertyType,
+                                onSelect = { choice ->
+                                    addPostViewModel.selectedPropertyType = choice
+                                }
+                            )
 
                         if (isHouseSuggestion) {
                             OutlinedTextField(
@@ -457,7 +456,7 @@ fun AddPostScreen(
 
                         if (!isHouseSuggestion) {
                             UptmDropdown(
-                                label = "Preferred Housemate Gender",
+                                label = "Housemate's Gender *",
                                 options = UptmConstants.GENDER_PREFERENCES,
                                 selected = addPostViewModel.selectedGender,
                                 onSelect = { choice -> addPostViewModel.selectedGender = choice }
@@ -465,22 +464,26 @@ fun AddPostScreen(
                         }
                     }
 
-                    SectionLabel("FACILITIES", counter = "${addPostViewModel.selectedFacilities.size} picked")
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        UptmConstants.FACILITIES.forEach { facility ->
-                            FilterChip(
-                                selected = addPostViewModel.selectedFacilities.contains(facility),
-                                onClick = { addPostViewModel.toggleFacility(facility) },
-                                label = { Text(facility) }
-                            )
+                        SectionLabel(
+                            "FACILITIES",
+                            counter = "${addPostViewModel.selectedFacilities.size} picked"
+                        )
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            UptmConstants.FACILITIES.forEach { facility ->
+                                FilterChip(
+                                    selected = addPostViewModel.selectedFacilities.contains(facility),
+                                    onClick = { addPostViewModel.toggleFacility(facility) },
+                                    label = { Text(facility) }
+                                )
+                            }
                         }
-                    }
 
-                    if (!isHouseSuggestion) {
+
+                    if (!isHouseSuggestion ) {
                         Text(
                             "About Us",
                             style = MaterialTheme.typography.titleMedium
@@ -523,7 +526,7 @@ fun AddPostScreen(
                     OutlinedTextField(
                         value = addPostViewModel.contactPhone,
                         onValueChange = { addPostViewModel.contactPhone = it },
-                        label = { RequiredLabel("Phone Number") },
+                        label = { Text("Phone Number *") },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -701,7 +704,7 @@ private fun StepItem(
             modifier = Modifier
                 .size(28.dp)
                 .background(
-                    color = if (isActive) MaterialTheme.colorScheme.primary else Color(0xFFC4CBD4),
+                    color = if (isActive) colorScheme.primary else Color(0xFFC4CBD4),
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -720,24 +723,11 @@ private fun StepItem(
             text = label,
             fontSize = 14.sp,
             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-            color = if (isActive) MaterialTheme.colorScheme.primary else Color(0xFF8C96A3)
+            color = if (isActive) colorScheme.primary else Color(0xFF8C96A3)
         )
     }
 }
 
-@Composable
-fun PostTypeBadge(isHouseSuggestion: Boolean) {
-    val container = if (isHouseSuggestion) colorScheme.primary else colorScheme.secondary
-    val labelColor = if (isHouseSuggestion) colorScheme.onPrimary else colorScheme.onSecondary
-    Surface(color = container, contentColor = labelColor, shape = RoundedCornerShape(percent = 50)) {
-        Text(
-            text = if (isHouseSuggestion) "HOUSE SUGGESTION" else "HOUSEMATE WANTED",
-            style = MaterialTheme.typography.labelMedium,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-        )
-    }
-}
 
 @Composable
 fun SectionLabel(title: String, counter: String? = null) {
@@ -778,13 +768,3 @@ fun FormCard(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-@Composable
-fun RequiredLabel(label: String) {
-    Row(verticalAlignment = Alignment.Top) {
-        Text(text = label)
-        Text(
-            text = " *",
-            color = colorScheme.secondary
-        )
-    }
-}

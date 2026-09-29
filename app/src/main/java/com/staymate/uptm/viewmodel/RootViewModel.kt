@@ -2,7 +2,6 @@ package com.staymate.uptm.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.staymate.uptm.repository.AuthRepository
@@ -12,10 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 sealed class StartupState {
-    object Loading : StartupState()
-    object NotSignedIn : StartupState()
-    object NeedsOnboarding : StartupState()
-    object Ready : StartupState()
+    data object Loading : StartupState()
+    data object NotSignedIn : StartupState()
+    data object NeedsOnboarding : StartupState()
+    data object Ready : StartupState()
+    data object AdminReady : StartupState()
 }
 
 class RootViewModel(app: Application) : AndroidViewModel(app) {
@@ -24,7 +24,6 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
     private val _startupState = MutableStateFlow<StartupState>(StartupState.Loading)
     val startupState: StateFlow<StartupState> = _startupState.asStateFlow()
 
-    // NEW: Listen to Auth changes (login/logout) in real-time
     private val authListener = FirebaseAuth.AuthStateListener { auth ->
         viewModelScope.launch {
             val user = auth.currentUser
@@ -35,6 +34,7 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
                     if (uid != null) repository.signOut(getApplication())
                     StartupState.NotSignedIn
                 }
+                repository.isAdminEmail(email) -> StartupState.AdminReady
                 repository.doesUserProfileExist(uid) -> StartupState.Ready
                 else -> StartupState.NeedsOnboarding
             }
@@ -42,20 +42,18 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
-        // Start listening when the app opens
         FirebaseAuth.getInstance().addAuthStateListener(authListener)
     }
 
     override fun onCleared() {
         super.onCleared()
-        // Stop listening when the app is destroyed to prevent memory leaks
         FirebaseAuth.getInstance().removeAuthStateListener(authListener)
     }
 
-    // 1logout function
     fun logout() {
-        repository.signOut(getApplication()) // getApplication() hands over the stored Application Context
+        repository.signOut(getApplication())
     }
+
     fun checkStartup() {
         viewModelScope.launch {
             val user = FirebaseAuth.getInstance().currentUser
@@ -66,6 +64,7 @@ class RootViewModel(app: Application) : AndroidViewModel(app) {
                     if (uid != null) repository.signOut(getApplication())
                     StartupState.NotSignedIn
                 }
+                repository.isAdminEmail(email) -> StartupState.AdminReady
                 repository.doesUserProfileExist(uid) -> StartupState.Ready
                 else -> StartupState.NeedsOnboarding
             }

@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.staymate.uptm.model.Post
+import com.staymate.uptm.repository.AuthRepository
 import com.staymate.uptm.repository.PostRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -25,13 +27,16 @@ sealed interface PostDetailsUiState {
 
 // details engine; the id is PUSHED IN by the screen (select), not baked into the constructor
 @OptIn(ExperimentalCoroutinesApi::class)
-class PostDetailsViewModel(private val postRepository: PostRepository) : ViewModel() {
+class PostDetailsViewModel(
+    private val postRepository: PostRepository,
+    private val authRepository: AuthRepository = AuthRepository()
+) : ViewModel() {
 
     // which post the screen wants right now; null = nothing tapped yet
     private val _postId = MutableStateFlow<String?>(null)
 
     // the screen calls this every time it appears (the "bike bell" that re-plugs the listener)
-    fun select(id: String) {
+    fun select(id: String?) {
         _postId.value = id
     }
 
@@ -40,9 +45,11 @@ class PostDetailsViewModel(private val postRepository: PostRepository) : ViewMod
 
     init {
         viewModelScope.launch {
-            // new id -> drop the old doc listener, plug a fresh one (same flatMapLatest muscle as feed)
-            _postId.flatMapLatest { id ->
-                if (id == null) {
+            // new id or new auth uid -> drop the old doc listener, plug a fresh one
+            combine(authRepository.observeAuthUid(), _postId) { uid, id ->
+                uid to id
+            }.flatMapLatest { (uid, id) ->
+                if (uid == null || id == null) {
                     flowOf<PostDetailsUiState>(PostDetailsUiState.Loading)
                 } else {
                     postRepository.observePostById(id)
@@ -52,7 +59,7 @@ class PostDetailsViewModel(private val postRepository: PostRepository) : ViewMod
                             else PostDetailsUiState.Success(post)
                         }
                         .catch { e ->
-                            // seatbelt (locked habit): a denied/broken read lands here as calm Error
+                            // seatbelt: a denied/broken read lands here as calm Error
                             emit(PostDetailsUiState.Error(e.message ?: "Could not load this post"))
                         }
                 }
@@ -63,12 +70,12 @@ class PostDetailsViewModel(private val postRepository: PostRepository) : ViewMod
     }
 }
 
-// one waiter only: details reads posts, never auth, so it doesn't pay rent on an empty auth room
 class PostDetailsViewModelFactory(
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return PostDetailsViewModel(postRepository) as T
+        return PostDetailsViewModel(postRepository, authRepository) as T
     }
 }
