@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,9 +25,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KingBed
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -138,23 +151,20 @@ fun PostDetailsScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Box(
-                modifier = Modifier.padding(8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "⋮",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.clickable { showMenu = true }
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    if (isOwner) {
+                    if (isOwner || onEditClick != null) {
                         DropdownMenuItem(
                             text = { Text("Delete Post", color = Color.Red, fontWeight = FontWeight.Bold) },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) },
@@ -163,7 +173,8 @@ fun PostDetailsScreen(
                                 showDeleteDialog = true
                             }
                         )
-                    } else {
+                    }
+                    if (!isOwner) {
                         DropdownMenuItem(
                             text = { Text("Report", color = Color(0xFFFF9800), fontWeight = FontWeight.Bold) },
                             leadingIcon = { Icon(Icons.Default.Warning, contentDescription = "Report", tint = Color(0xFFFF9800)) },
@@ -200,7 +211,16 @@ fun PostDetailsScreen(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("This post no longer exists.", color = Color.Gray, fontSize = 16.sp)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.SearchOff,
+                            contentDescription = null,
+                            tint = Color(0xFF9CA3AF),
+                            modifier = Modifier.size(52.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("This post no longer exists.", color = Color.Gray, fontSize = 16.sp)
+                    }
                 }
             }
 
@@ -292,248 +312,212 @@ fun PostDetailsScreen(
                         .background(MaterialTheme.colorScheme.background)
                         .verticalScroll(rememberScrollState())
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (post.authorPhotoUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = post.authorPhotoUrl,
+                                    contentDescription = "Author photo",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Poster avatar",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = post.authorName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = relativeTime(post.createdAt),
+                                color = Color.Gray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         val isHouseSuggestion = post.type == UptmConstants.POST_TYPE_KEY_SUGGESTION
                         val isGroupFinding = post.type == UptmConstants.POST_TYPE_KEY_GROUP_FINDING
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
+
+                        //HERO CARD: type badge + title + location
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                if (post.authorPhotoUrl.isNotBlank()) {
-                                    AsyncImage(
-                                        model = post.authorPhotoUrl,
-                                        contentDescription = "Author photo",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = "Poster avatar",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
+                                // type badge chip
+                                Surface(
+                                    color = when (post.type) {
+                                        "house_suggestion" -> MaterialTheme.colorScheme.primaryContainer
+                                        "group_finding" -> MaterialTheme.colorScheme.tertiaryContainer
+                                        else -> MaterialTheme.colorScheme.secondaryContainer
+                                    },
+                                    shape = RoundedCornerShape(50)
+                                ) {
+                                    Text(
+                                        text = when (post.type) {
+                                            "house_suggestion" -> "House Suggestion"
+                                            "group_finding" -> "Finding a Group"
+                                            else -> "Housemate Wanted"
+                                        },
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+
                                 Text(
-                                    text = post.authorName,
+                                    text = post.title,
+                                    fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = relativeTime(post.createdAt),
-                                    color = Color.Gray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                color = when (post.type) {
-                                    "house_suggestion" -> MaterialTheme.colorScheme.primaryContainer
-                                    "group_finding" -> MaterialTheme.colorScheme.tertiaryContainer
-                                    else -> MaterialTheme.colorScheme.secondaryContainer
-                                },
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                val labelText = when (post.type) {
-                                    "house_suggestion" -> "House Suggestion"
-                                    "group_finding" -> "Finding a Group"
-                                    else -> "Housemate Wanted"
-                                }
-                                Text(
-                                    text = labelText,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = post.title,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-
-                        if (post.propertyName.isNotBlank()) {
-                            Text(
-                                text = post.propertyName,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-
-                        if (post.location.isNotBlank()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text("📍")
-                                Text(post.location, color = MaterialTheme.colorScheme.onBackground)
-                            }
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
-                            val priceDisplay = if (post.priceRM > 0 && post.rentPerPerson > 0 && post.type == "group_finding") {
-                                "RM${post.priceRM.toInt()} - RM${post.rentPerPerson.toInt()}"
-                            } else {
-                                "RM ${priceVal.toInt()}"
-                            }
-                            Text(
-                                text = priceDisplay,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-
-                            if (post.bedrooms > 0) {
-                                Text(
-                                    text = "${post.bedrooms} bedroom(s)",
+                                    lineHeight = 28.sp,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
-                            }
-                        }
 
-                        // Money & Room Info: only meaningful for Housemate Wanted posts
-                        // (group posts show a price RANGE up top; suggestions carry no money info)
-                        if (!isHouseSuggestion && !isGroupFinding) {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = "Money & Room Info",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                if (post.rentPerPerson > 0) {
-                                    Text(
-                                        text = "Rent per person: RM ${post.rentPerPerson.toInt()}",
-                                        color = MaterialTheme.colorScheme.onBackground
-                                    )
+                                if (post.propertyName.isNotBlank()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Home,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = post.propertyName,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
                                 }
-                                if (post.deposit > 0) {
-                                    Text(
-                                        text = "Deposit: RM ${post.deposit.toInt()}",
-                                        color = MaterialTheme.colorScheme.onBackground
-                                    )
-                                }
-                                if (post.currentHousemates > 0) {
-                                    Text(
-                                        text = "Current housemates: ${post.currentHousemates}",
-                                        color = MaterialTheme.colorScheme.onBackground
-                                    )
-                                }
-                            }
-                        }
 
-                        if (post.moveInDate > 0) {
-                            Text(
-                                text = "Move-in Date: ${formatMoveInDate(post.moveInDate)}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-
-                        if (post.furnishedStatus.isNotBlank()) {
-                            Text(
-                                text = "Furnished: ${post.furnishedStatus}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-
-                        if (post.propertyType.isNotBlank()) {
-                            Text(
-                                text = "Property type: ${post.propertyType}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-
-                        // Facilities: hidden for Finding-a-Group posts (they never pick facilities)
-                        if (!isGroupFinding) {
-                            Text(
-                                text = "Facilities",
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-
-                            if (post.facilities.isEmpty()) {
-                                Text("No facilities listed", color = Color.Gray)
-                            } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    post.facilities.forEach { facility ->
-                                        Text("• $facility", color = MaterialTheme.colorScheme.onBackground)
+                                if (post.location.isNotBlank()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = Color(0xFFED1C24),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = post.location,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
                         }
 
-                        Text(
-                            text = "    About Us / Information",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                        // KEY FACTS CARD
+                        KeyFactsCard(post = post)
+
+                        // MONEY & ROOM INFO (Housemate Wanted only)
+                        if (!isHouseSuggestion && !isGroupFinding) {
+                            MoneyInfoCard(post = post)
+                        }
+
+                        //  FACILITIES (hidden for Finding-a-Group posts)
+                        if (!isGroupFinding) {
+                            FacilitiesCard(post = post)
+                        }
+
+                        // ABOUT / DESCRIPTION CARD
+                        AboutCard(
+                            post = post,
+                            isHouseSuggestion = isHouseSuggestion,
+                            isGroupFinding = isGroupFinding
                         )
 
-                        if (post.description.isNotBlank()) {
-                            Text(post.description, color = MaterialTheme.colorScheme.onBackground)
-                        } else {
-                            Text("No description provided.", color = MaterialTheme.colorScheme.onBackground)
-                        }
-
-                        if (post.genderPreference.isNotBlank()) {
-                            Text(
-                                text = "Gender preference: ${post.genderPreference}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-
-                        if (post.propertyLink.isNotBlank()) {
-                            Text(
-                                text = "Link: ${post.propertyLink}",
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
 
-                // Bottom actions: Contact & Save/Edit
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // STICKY BOTTOM ACTIONS: Contact & Save/Edit
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Button(
-                        onClick = { showContactDialog = true },
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Contact")
-                    }
-
-                    if (isOwner) {
-                        OutlinedButton(
-                            onClick = { onEditClick?.invoke(post) },
-                            modifier = Modifier.weight(1f)
+                        Button(
+                            onClick = { showContactDialog = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("Edit")
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Contact", fontWeight = FontWeight.Bold)
                         }
-                    } else {
-                        OutlinedButton(
-                            onClick = { saveViewModel.toggleSave(post.id) },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(if (savedIds.contains(post.id)) "Saved" else "Save")
+
+                        if (isOwner || onEditClick != null) {
+                            OutlinedButton(
+                                onClick = { onEditClick?.invoke(post) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Text("Edit", fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = { saveViewModel.toggleSave(post.id) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Text(
+                                    if (savedIds.contains(post.id)) "Saved" else "Save",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -543,6 +527,355 @@ fun PostDetailsScreen(
 
     BackHandler {
         onBack()
+    }
+}
+
+// key facts tiles: price / bedrooms / move-in / furnished / property type
+@Composable
+private fun KeyFactsCard(post: Post) {
+    val priceDisplay = "RM${post.priceRM.toInt()}"
+    val hasBedrooms = post.bedrooms > 0
+    val hasMoveIn = post.moveInDate > 0
+    val hasFurnished = post.furnishedStatus.isNotBlank()
+    val hasPropertyType = post.propertyType.isNotBlank()
+
+    val hasAnyFacts = hasBedrooms || hasMoveIn || hasFurnished || hasPropertyType
+    if (!hasAnyFacts) return
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // price strip: the number everyone scans for, in the accent color
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Payments,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "$priceDisplay / monthly",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            )
+
+            // 2-up tiles: bedrooms + move-in
+            if (hasBedrooms || hasMoveIn) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (hasBedrooms) {
+                        FactTile(
+                            icon = Icons.Default.KingBed,
+                            value = "${post.bedrooms}",
+                            label = "bedroom(s)",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (hasMoveIn) {
+                        FactTile(
+                            icon = Icons.Default.CalendarMonth,
+                            value = formatMoveInDate(post.moveInDate),
+                            label = "Move-in date",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // 2-up tiles: furnished + property type
+            if (hasFurnished || hasPropertyType) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (hasFurnished) {
+                        FactTile(
+                            icon = Icons.Default.Home,
+                            value = post.furnishedStatus,
+                            label = "Furnished",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (hasPropertyType) {
+                        FactTile(
+                            icon = Icons.Default.LocationOn,
+                            value = post.propertyType,
+                            label = "Property type",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FactTile(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(17.dp)
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ============ money tiles: deposit / current housemates ============
+@Composable
+private fun MoneyInfoCard(post: Post) {
+    val hasDeposit = post.deposit > 0
+    val hasHousemates = post.currentHousemates > 0
+    if (!hasDeposit && !hasHousemates) return
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Current Housemate",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (hasDeposit) {
+                    FactTile(
+                        icon = Icons.Default.Savings,
+                        value = "RM ${post.deposit.toInt()}",
+                        label = "Deposit",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (hasHousemates) {
+                    FactTile(
+                        icon = Icons.Default.Person,
+                        value = "${post.currentHousemates}",
+                        label = "Current housemates",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+// ============ facilities as little check-chips ============
+@Composable
+private fun FacilitiesCard(post: Post) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Facilities",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (post.facilities.isEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Wifi,
+                        contentDescription = null,
+                        tint = Color(0xFF9CA3AF),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("No facilities listed", color = Color.Gray, fontSize = 13.sp)
+                }
+            } else {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    post.facilities.forEach { facility ->
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = facility,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============ about: description + gender preference + property link ============
+@Composable
+private fun AboutCard(
+    post: Post,
+    isHouseSuggestion: Boolean,
+    isGroupFinding: Boolean
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = if (isGroupFinding) "About the Group" else if (isHouseSuggestion) "Information" else "About Us",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (post.description.isNotBlank()) {
+                Text(
+                    text = post.description,
+                    fontSize = 14.sp,
+                    lineHeight = 21.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text("No description provided.", color = Color.Gray, fontSize = 14.sp)
+            }
+
+            if (post.genderPreference.isNotBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Gender preference: ${post.genderPreference}",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (post.propertyLink.isNotBlank()) {
+                val context = LocalContext.current
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            var url = post.propertyLink.trim()
+                            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                                url = "https://$url"
+                            }
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                // Fallback
+                            }
+                        }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Link,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = post.propertyLink,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
     }
 }
 

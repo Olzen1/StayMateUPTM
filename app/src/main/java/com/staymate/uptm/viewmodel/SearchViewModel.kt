@@ -35,7 +35,7 @@ sealed interface SearchUiState {
 }
 
 class SearchViewModel(
-    private val postRepository: PostRepository
+    postRepository: PostRepository
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -145,7 +145,7 @@ class SearchViewModel(
     }
 
     private fun matchesFilters(post: Post, filters: SearchFilterState): Boolean {
-        val postPrice = if (post.priceRM > 0) post.priceRM else post.rentPerPerson
+        val postPrice =  post.priceRM
         if (filters.minPrice != null && postPrice < filters.minPrice) return false
         if (filters.maxPrice != null && postPrice > filters.maxPrice) return false
 

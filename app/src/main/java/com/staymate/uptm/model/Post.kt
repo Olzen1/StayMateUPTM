@@ -24,7 +24,7 @@ data class Post(
     val likeCount: Long = 0,
     val deposit: Double = 0.0,
     val furnishedStatus: String = "",
-    val rentPerPerson: Double = 0.0,
+
     val currentHousemates: Long = 0,
     val commentCount: Long = 0,
     val contactPhone: String = "",

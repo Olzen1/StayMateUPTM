@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import com.staymate.uptm.model.Post
+import com.staymate.uptm.utils.UptmConstants
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,7 +65,10 @@ fun PostCard(
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -129,48 +133,51 @@ fun PostCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             // Property Name / Location
-            val propertyDisplayName = post.propertyName.ifBlank { post.location }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Location",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = propertyDisplayName,
-                    color = Color.Gray,
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            val isGroupFinding = post.type == UptmConstants.POST_TYPE_KEY_GROUP_FINDING
 
+            val isHouseSuggestion = post.type == UptmConstants.POST_TYPE_KEY_SUGGESTION
+            val propertyDisplayName = post.propertyName.ifBlank { post.location }
+            if (!isGroupFinding) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = propertyDisplayName,
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(10.dp))
 
             // Rounded boxes: Rent/Price, Bedrooms (omitted for finding a group), Move-in Date
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val priceStr = if (post.priceRM > 0 && post.rentPerPerson > 0 && post.type == "group_finding") {
-                    "RM${post.priceRM.toInt()} - RM${post.rentPerPerson.toInt()}"
-                } else {
-                    val priceVal = if (post.rentPerPerson > 0) post.rentPerPerson else post.priceRM
-                    "RM${priceVal.toInt()} / month"
-                }
-                val moveInStr = "Move in: ${formatMoveInDate(post.moveInDate)}"
 
-                InfoPillBox(text = priceStr, modifier = Modifier.weight(1f))
-                if (post.type != "group_finding") {
-                    val bedroomStr = "${post.bedrooms} Bedroom"
-                    InfoPillBox(text = bedroomStr, modifier = Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (post.type != "group_finding") {
+                        val bedroomStr = "${post.bedrooms} Bedroom"
+                        InfoPillBox(text = bedroomStr, modifier = Modifier.weight(1f))
+                    }
+                    val priceStr ="RM${post.priceRM.toInt()}"
+
+                    val moveInStr = "Move in: ${formatMoveInDate(post.moveInDate)}"
+
+                    InfoPillBox(text = priceStr, modifier = Modifier.weight(1f))
+                    if(!isHouseSuggestion)
+                    InfoPillBox(text = moveInStr, modifier = Modifier.weight(1.2f))
                 }
-                InfoPillBox(text = moveInStr, modifier = Modifier.weight(1.2f))
-            }
+
 
             // About Us / Description (only if not blank)
             if (post.description.isNotBlank()) {

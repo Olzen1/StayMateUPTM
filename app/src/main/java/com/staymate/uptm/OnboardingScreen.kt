@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -166,8 +167,20 @@ fun OnboardingScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    UptmDropdown("Course", UptmConstants.COURSES, selectedCourse, viewModel::onCourseSelected)
-                    UptmDropdown("Semester", UptmConstants.SEMESTERS, selectedSemester, viewModel::onSemesterSelected)
+                    UptmDropdown(
+                        "Course",
+                        UptmConstants.COURSES,
+                        selectedCourse,
+                        viewModel::onCourseSelected,
+                        leadingIcon = Icons.Default.School   // onboarding keeps its icon; post-form dropdowns pass nothing
+                    )
+                    UptmDropdown(
+                        "Semester",
+                        UptmConstants.SEMESTERS,
+                        selectedSemester,
+                        viewModel::onSemesterSelected,
+                        leadingIcon = Icons.Default.School
+                    )
 
                     Spacer(Modifier.height(4.dp))
 
@@ -392,9 +405,16 @@ fun UptmDropdown(
     label: String,
     options: List<String>,
     selected: String,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    leadingIcon: ImageVector? = null   // optional: post-form dropdowns call with NO icon, onboarding passes School
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val icon: ImageVector? = leadingIcon
+    val iconContent: (@Composable () -> Unit)? = if (icon != null) {
+        { Icon(icon, contentDescription = null) }
+    } else {
+        null
+    }
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
@@ -402,7 +422,7 @@ fun UptmDropdown(
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
-            leadingIcon = { Icon(Icons.Default.School, contentDescription = null) },
+            leadingIcon = iconContent,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             shape = RoundedCornerShape(14.dp),
             colors = uptmFieldColors(),

@@ -287,9 +287,11 @@ private fun EditUserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+
         title = { Text("Edit User", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.background(MaterialTheme.colorScheme.background),) {
                 Text(
                     text = user.email,
                     fontSize = 12.sp,
@@ -302,8 +304,18 @@ private fun EditUserDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                UptmDropdown("Course", UptmConstants.COURSES, course) { course = it }
-                UptmDropdown("Semester", UptmConstants.SEMESTERS, semester) { semester = it }
+                UptmDropdown(
+                    "Course",
+                    UptmConstants.COURSES,
+                    course,
+                    onSelect = { course = it }
+                )
+                UptmDropdown(
+                    "Semester",
+                    UptmConstants.SEMESTERS,
+                    semester,
+                    onSelect = { semester = it }
+                )
             }
         },
         confirmButton = {

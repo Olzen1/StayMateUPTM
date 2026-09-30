@@ -4,7 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.staymate.uptm.model.Post
 import com.staymate.uptm.repository.AuthRepository
@@ -15,8 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import android.content.Context
-import androidx.lifecycle.ViewModel
 
 
 sealed interface AddPostUiState {
@@ -65,7 +63,6 @@ class AddPostViewModel(
     var moveInDateToMillis by mutableStateOf<Long?>(null) // Latest Date
     var depositText by mutableStateOf("")
     var selectedFurnished by mutableStateOf("")
-    var rentPerPersonText by mutableStateOf("")
     var currentHousematesText by mutableStateOf("")
 
     // Form fields - Step 2: Contact Information
@@ -95,7 +92,7 @@ class AddPostViewModel(
         propertyName = post.propertyName
         location = post.location
         priceText = if (post.priceRM > 0) post.priceRM.toInt().toString() else ""
-        maxPriceText = if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
+
         description = post.description
         propertyLink = post.propertyLink
         selectedBedrooms = if (post.bedrooms > 0) post.bedrooms.toString() else ""
@@ -103,8 +100,7 @@ class AddPostViewModel(
         selectedGender = post.genderPreference
         selectedFurnished = post.furnishedStatus
         depositText = if (post.deposit > 0) post.deposit.toInt().toString() else ""
-        rentPerPersonText =
-            if (post.rentPerPerson > 0) post.rentPerPerson.toInt().toString() else ""
+
         currentHousematesText =
             if (post.currentHousemates > 0) post.currentHousemates.toString() else ""
         selectedFacilities = post.facilities
@@ -208,8 +204,7 @@ class AddPostViewModel(
                 bedrooms = selectedBedrooms.toLongOrNull() ?: 0,
                 deposit = depositText.toDoubleOrNull() ?: 0.0,
                 furnishedStatus = selectedFurnished,
-                rentPerPerson = if (typeKey == UptmConstants.POST_TYPE_KEY_GROUP_FINDING && maxPriceText.isNotBlank()) maxPriceText.toDoubleOrNull()
-                    ?: 0.0 else rentPerPersonText.toDoubleOrNull() ?: 0.0,
+
                 currentHousemates = currentHousematesText.toLongOrNull() ?: 0,
                 propertyType = selectedPropertyType,
                 propertyLink = if (typeKey == UptmConstants.POST_TYPE_KEY_SUGGESTION) propertyLink else "",
@@ -259,7 +254,6 @@ class AddPostViewModel(
         selectedPropertyType = ""
         selectedGender = ""
         selectedFurnished = ""
-        rentPerPersonText = ""
         depositText = ""
         currentHousematesText = ""
         selectedFacilities = emptyList()
