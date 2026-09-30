@@ -120,10 +120,7 @@ fun MainScreen() {
                     if (postId != null) {
                         PostDetailsScreen(
                             postId = postId,
-                            onBack = {
-                                selectedPostId = null
-                                currentRoute = "home"
-                            },
+                            onBack = { currentRoute = "home" },
                             onEditClick = { post ->
                                 addPostViewModel.populateForEditing(post)
                                 selectedPostType = if (post.type == UptmConstants.POST_TYPE_KEY_SUGGESTION) {

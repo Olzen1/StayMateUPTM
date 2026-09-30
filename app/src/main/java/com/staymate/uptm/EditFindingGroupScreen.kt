@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.staymate.uptm.model.Post
 import com.staymate.uptm.repository.AuthRepository
 import com.staymate.uptm.repository.PostRepository
 
@@ -53,7 +52,7 @@ fun EditFindingGroupScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                title = { Text("Group", fontWeight = FontWeight.Bold) },
+                title = { Text("Edit Finding a group post", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(

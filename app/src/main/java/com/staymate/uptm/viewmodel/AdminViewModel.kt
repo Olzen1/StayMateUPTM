@@ -90,4 +90,25 @@ class AdminViewModel(
             postRepository.deletePost(postId)
         }
     }
+
+    // moderation: remove every report against one post — the post itself stays in the live feed
+    fun dismissReportsForPost(postId: String) {
+        viewModelScope.launch {
+            postRepository.dismissReportsForPost(postId)
+        }
+    }
+
+    // user management: edit a registered user's name / course / semester
+    fun updateUser(uid: String, fullName: String, course: String, semester: String) {
+        viewModelScope.launch {
+            authRepository.updateUserProfile(uid, fullName, course, semester)
+        }
+    }
+
+    // user management: delete a registered user's profile doc from Firestore
+    fun deleteUser(uid: String) {
+        viewModelScope.launch {
+            authRepository.deleteUserProfile(uid)
+        }
+    }
 }

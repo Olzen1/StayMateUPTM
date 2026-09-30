@@ -1,24 +1,23 @@
+@file:Suppress("DEPRECATION")
+
 package com.staymate.uptm.repository
 
 import android.content.Context
-
-import com.google.android.gms.auth.api.signin.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
-import com.staymate.uptm.R
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.GoogleAuthProvider
-import com.staymate.uptm.utils.UptmConstants
-import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.FirebaseFirestore
+import com.staymate.uptm.R
 import com.staymate.uptm.model.UserProfile
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlin.collections.remove
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import kotlinx.coroutines.tasks.await
+
 @Suppress("DEPRECATION")
 class AuthRepository {
 
@@ -55,7 +54,7 @@ class AuthRepository {
                     val realUid = auth.currentUser?.uid
                     if (realUid != null) Result.success(realUid)
                     else Result.failure(Exception("Admin session did not stick. Try again."))
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // wrong password / no such account / network: ONE honest failure, no fake badge
                     Result.failure(Exception("Wrong admin email or password."))
                 }
@@ -110,7 +109,7 @@ class AuthRepository {
         return try {
             val document = firestore.collection("users").document(uid).get().await()
             document.exists()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -143,6 +142,18 @@ class AuthRepository {
         return try {
             firestore.collection("users").document(profile.uid).set(profile).await()
             Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // admin moderation: remove a registered user's profile doc from Firestore
+    // (the Firebase Auth login record itself can only be removed from the Firebase Console —
+    //  client apps are never allowed to delete other people's auth accounts)
+    suspend fun deleteUserProfile(uid: String): Result<Unit> {
+        return try {
+            firestore.collection("users").document(uid).delete().await()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

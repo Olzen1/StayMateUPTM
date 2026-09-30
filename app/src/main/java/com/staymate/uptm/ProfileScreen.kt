@@ -22,11 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,10 +36,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,7 +92,14 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .background(colorScheme.primary),
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            colorScheme.primary,
+                            colorScheme.tertiary
+                        )
+                    )
+                ),
             contentAlignment = Alignment.TopCenter
         ) {
             Text(
@@ -127,8 +134,7 @@ fun ProfileScreen(
                         .clip(CircleShape)
                         .background(Color(0xFFE0E0E0)),
                     contentAlignment = Alignment.Center
-                ) {// Profile photo using Google picture with initials fallback
-                    // Profile photo using Google picture with initials fallback
+                ) {
                     ProfileAvatar(
                         photoUrl = profile?.photoUrl,
                         fullName = userName,
@@ -143,30 +149,31 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ---------- NAME (bold, auto from login) ----------
+            // NAME
             Text(
                 text = userName,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = colorScheme.onSurface
+                color = colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
 
-            // ---------- COURSE & SEMESTER (nothing until the user adds them) ----------
+            // COURSE & SEMESTER
             val details = listOf(userCourse, userSemester)
                 .filter { it.isNotBlank() }
-                .joinToString(", ")
+                .joinToString("\n")
             if (details.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = details,
                     fontSize = 14.sp,
-                    color = colorScheme.onSurface,
-                    modifier = Modifier.clickable { showEditDialog = true }
+                    color = colorScheme.onSurface
                 )
             } else {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Tap here to add your course & semester",
+                    text = "course & semester",
                     fontSize = 13.sp,
                     color = Color(0xFF0091FF),
                     fontWeight = FontWeight.Medium,
@@ -179,7 +186,7 @@ fun ProfileScreen(
     val postCount by viewModel.userPostCount.collectAsStateWithLifecycle()
     val savedPostCount by viewModel.savedPostCount.collectAsStateWithLifecycle()
 
-    // ---------- STATS: Posts / Saved Post / Groups ----------
+    // STATS: Posts / Saved Post
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -194,12 +201,12 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ---------- divider line between top and middle section ----------
+            // ----------    divider line between top and middle section
             HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = Color(0xFFE5E7EB))
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // ---------- MENU: Edit Profile / Saved Post / Edit Posts ----------
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -207,11 +214,11 @@ fun ProfileScreen(
                     .background(color = colorScheme.surface)
                     .padding(vertical = 8.dp)
             ) {
-                MenuItem(Icons.Default.Edit, "Edit Profile") { showEditDialog = true }
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = colorScheme.tertiary
-                )
+                //MenuItem(Icons.Default.Edit, "Edit Profile") { showEditDialog = true }
+                //                HorizontalDivider(
+                //                    modifier = Modifier.padding(horizontal = 16.dp),
+                //                    color = colorScheme.tertiary
+                //                )
                 MenuItem(Icons.Default.BookmarkBorder, "Saved Post") { onNavigateToSavedPosts() }
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -222,7 +229,7 @@ fun ProfileScreen(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = colorScheme.tertiary
                 )
-                MenuItem(Icons.Default.Groups, "Edit Finding a Group") { onNavigateToEditFindingGroup() }
+                MenuItem(Icons.Default.Groups, "Edit Finding a Group Post") { onNavigateToEditFindingGroup() }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -327,17 +334,16 @@ fun ProfileAvatar(
         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
         .joinToString("")
 
-    // 2. Check if we actually have a Google photo link
+    // Check if we actually have a Google photo link
     if (photoUrl.isNullOrBlank()) {
-        // FALLBACK: No photo link, show the initials in a colored circle
         Box(
             modifier = modifier
-                .background(MaterialTheme.colorScheme.primary, CircleShape),
+                .background(colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = initials,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = colorScheme.onPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )

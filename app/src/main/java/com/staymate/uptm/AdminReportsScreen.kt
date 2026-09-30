@@ -17,12 +17,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,6 +50,7 @@ fun AdminReportsScreen(
 ) {
     val reportedPosts by adminViewModel.reportedPosts.collectAsStateWithLifecycle()
     var postToDelete by remember { mutableStateOf<Post?>(null) }
+    var postToDismiss by remember { mutableStateOf<Post?>(null) }
 
     Column(
         modifier = Modifier
@@ -106,7 +109,7 @@ fun AdminReportsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
-                                    .padding(bottom = 12.dp),
+                                    .padding(bottom = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 Button(
@@ -141,6 +144,28 @@ fun AdminReportsScreen(
                                     Text("Delete Post", fontSize = 12.sp, color = Color.White)
                                 }
                             }
+
+                            // Remove-from-reports: clears every report against this post; the post itself stays live
+                            OutlinedButton(
+                                onClick = { postToDismiss = post },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 12.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFE65100)
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.DoneAll,
+                                    contentDescription = "Remove Report",
+                                    tint = Color(0xFFE65100),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Remove from Reported Posts", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -167,6 +192,31 @@ fun AdminReportsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { postToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (postToDismiss != null) {
+        AlertDialog(
+            onDismissRequest = { postToDismiss = null },
+            title = { Text("Remove from Reported Posts", fontWeight = FontWeight.Bold) },
+            text = { Text("Remove this post's reports from your list? The post itself will stay live in the app — only the report is cleared.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val id = postToDismiss!!.id
+                        postToDismiss = null
+                        adminViewModel.dismissReportsForPost(id)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100))
+                ) {
+                    Text("Remove Report", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { postToDismiss = null }) {
                     Text("Cancel")
                 }
             }

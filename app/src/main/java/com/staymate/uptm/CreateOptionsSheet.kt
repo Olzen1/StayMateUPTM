@@ -180,7 +180,7 @@ fun CreateOptionsSheet(
                     // Text
                     Column {
                         Text(
-                            text = "Group",
+                            text = "Find a Group Post",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground

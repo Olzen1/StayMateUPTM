@@ -456,7 +456,7 @@ fun AddPostScreen(
 
                         if (!isHouseSuggestion) {
                             UptmDropdown(
-                                label = "Housemate's Gender *",
+                                label = "preffered housemate Gender *",
                                 options = UptmConstants.GENDER_PREFERENCES,
                                 selected = addPostViewModel.selectedGender,
                                 onSelect = { choice -> addPostViewModel.selectedGender = choice }

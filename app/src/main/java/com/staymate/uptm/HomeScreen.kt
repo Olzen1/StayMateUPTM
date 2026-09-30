@@ -18,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -34,6 +33,7 @@ import com.staymate.uptm.utils.PostNotificationHelper
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -114,7 +114,14 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(140.dp)
                     .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                colorScheme.primary,
+                                colorScheme.tertiary
+                            )
+                        )
+                    )
                     .padding(horizontal = 20.dp, vertical = 40.dp)
             ) {
                 Column {
@@ -143,7 +150,7 @@ fun HomeScreen(
                     Icon(
                         Icons.Default.Notifications,
                         contentDescription = "Notifications",
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = colorScheme.onSurface,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0x33FFFFFF))

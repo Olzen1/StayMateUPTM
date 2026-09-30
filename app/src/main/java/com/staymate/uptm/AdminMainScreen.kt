@@ -97,10 +97,7 @@ fun AdminMainScreen(
                     if (postId != null) {
                         PostDetailsScreen(
                             postId = postId,
-                            onBack = {
-                                selectedPostId = null
-                                currentRoute = previousRoute
-                            },
+                            onBack = { currentRoute = previousRoute },
                             onEditClick = { post ->
                                 addPostViewModel.populateForEditing(post)
                                 selectedPostType = when (post.type) {

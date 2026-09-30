@@ -1,16 +1,13 @@
 package com.staymate.uptm.repository // function tells Android where this file lives
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.staymate.uptm.model.Post
-import kotlinx.coroutines.tasks.await
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.channels.awaitClose
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.QuerySnapshot
+import kotlinx.coroutines.tasks.await
+
 class PostRepository { // function creates the Waiter class
      // read ONE post by its id, live (null if the doc is missing or deleted)
     fun observePostById(id: String): Flow<Post?> = callbackFlow {
@@ -89,6 +86,19 @@ class PostRepository { // function creates the Waiter class
         awaitClose { listener.remove() }
     }
 
+    // Function to dismiss (remove) every report filed against one post — the POST itself stays live
+    suspend fun dismissReportsForPost(postId: String): Result<Unit> {
+        return try {
+            val reportsQuery = db.collection("reports").whereEqualTo("postId", postId).get().await()
+            for (doc in reportsQuery.documents) {
+                doc.reference.delete().await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Function to report a post
     suspend fun reportPost(postId: String, postTitle: String, reporterUid: String): Result<Unit> {
         return try {
@@ -116,20 +126,20 @@ class PostRepository { // function creates the Waiter class
         }
     }
 
-    fun observeRecentActivities(): Flow<List<Map<String, Any>>> = callbackFlow {
-        val listener = db.collection("recent_activities")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(10)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val activities = snapshot?.documents?.mapNotNull { it.data } ?: emptyList()
-                trySend(activities)
-            }
-        awaitClose { listener.remove() }
-    }
+    //fun observeRecentActivities(): Flow<List<Map<String, Any>>> = callbackFlow {
+    //        val listener = db.collection("recent_activities")
+    //            .orderBy("timestamp", Query.Direction.DESCENDING)
+    //            .limit(10)
+    //            .addSnapshotListener { snapshot, error ->
+    //                if (error != null) {
+    //                    trySend(emptyList())
+    //                    return@addSnapshotListener
+    //                }
+    //                val activities = snapshot?.documents?.mapNotNull { it.data } ?: emptyList()
+    //                trySend(activities)
+    //            }
+    //        awaitClose { listener.remove() }
+    //    }
 
     fun observePosts(): Flow<List<Post>> { // function makes a Flow that spits out a List of Posts
         return callbackFlow { // function starts a special Flow builder for Firebase listeners

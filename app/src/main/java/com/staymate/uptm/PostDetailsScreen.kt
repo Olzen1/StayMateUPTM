@@ -1,7 +1,6 @@
 package com.staymate.uptm
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,7 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
@@ -60,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
@@ -75,7 +75,7 @@ import com.staymate.uptm.viewmodel.SaveUiState
 import com.staymate.uptm.viewmodel.SaveViewModel
 import com.staymate.uptm.viewmodel.SaveViewModelFactory
 import kotlinx.coroutines.launch
-import com.staymate.uptm.viewmodel.AddPostViewModel
+
 @Composable
 fun PostDetailsScreen(
     postId: String,
@@ -154,7 +154,7 @@ fun PostDetailsScreen(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    if (isOwner || onEditClick != null) {
+                    if (isOwner) {
                         DropdownMenuItem(
                             text = { Text("Delete Post", color = Color.Red, fontWeight = FontWeight.Bold) },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) },
@@ -163,8 +163,7 @@ fun PostDetailsScreen(
                                 showDeleteDialog = true
                             }
                         )
-                    }
-                    if (!isOwner) {
+                    } else {
                         DropdownMenuItem(
                             text = { Text("Report", color = Color(0xFFFF9800), fontWeight = FontWeight.Bold) },
                             leadingIcon = { Icon(Icons.Default.Warning, contentDescription = "Report", tint = Color(0xFFFF9800)) },
@@ -298,6 +297,7 @@ fun PostDetailsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         val isHouseSuggestion = post.type == UptmConstants.POST_TYPE_KEY_SUGGESTION
+                        val isGroupFinding = post.type == UptmConstants.POST_TYPE_KEY_GROUP_FINDING
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -409,7 +409,9 @@ fun PostDetailsScreen(
                             }
                         }
 
-                        if (!isHouseSuggestion) {
+                        // Money & Room Info: only meaningful for Housemate Wanted posts
+                        // (group posts show a price RANGE up top; suggestions carry no money info)
+                        if (!isHouseSuggestion && !isGroupFinding) {
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
                                     text = "Money & Room Info",
@@ -458,18 +460,21 @@ fun PostDetailsScreen(
                             )
                         }
 
-                        Text(
-                            text = "Facilities",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        // Facilities: hidden for Finding-a-Group posts (they never pick facilities)
+                        if (!isGroupFinding) {
+                            Text(
+                                text = "Facilities",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
 
-                        if (post.facilities.isEmpty()) {
-                            Text("No facilities listed", color = Color.Gray)
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                post.facilities.forEach { facility ->
-                                    Text("• $facility", color = MaterialTheme.colorScheme.onBackground)
+                            if (post.facilities.isEmpty()) {
+                                Text("No facilities listed", color = Color.Gray)
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    post.facilities.forEach { facility ->
+                                        Text("• $facility", color = MaterialTheme.colorScheme.onBackground)
+                                    }
                                 }
                             }
                         }
@@ -516,7 +521,7 @@ fun PostDetailsScreen(
                         Text("Contact")
                     }
 
-                    if (isOwner || onEditClick != null) {
+                    if (isOwner) {
                         OutlinedButton(
                             onClick = { onEditClick?.invoke(post) },
                             modifier = Modifier.weight(1f)
@@ -650,9 +655,9 @@ fun ContactInfoDialog(
                         }
                         val url = if (whatsappNum.isNotBlank()) "https://wa.me/$formattedNum" else "https://wa.me/"
                         try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                             context.startActivity(intent)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Fallback
                         }
                     },
@@ -677,7 +682,7 @@ fun ContactInfoDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(
-                            imageVector = Icons.Default.Chat,
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
                             contentDescription = "WhatsApp",
                             tint = Color.Black,
                             modifier = Modifier.size(24.dp)
