@@ -55,6 +55,7 @@ fun EditProfileDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 24.dp)
+
         ) {
             Text(
                 text = "Edit Profile",

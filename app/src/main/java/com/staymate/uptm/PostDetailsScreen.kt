@@ -1,5 +1,6 @@
 package com.staymate.uptm
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -425,7 +426,14 @@ fun PostDetailsScreen(
                                 if (post.location.isNotBlank()) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(
+                                                if (!isGroupFinding) Modifier.clickable {
+                                                    openInGoogleMaps(context, post.location)
+                                                } else Modifier
+                                            )
                                     ) {
                                         Icon(
                                             Icons.Default.LocationOn,
@@ -436,7 +444,7 @@ fun PostDetailsScreen(
                                         Text(
                                             text = post.location,
                                             fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = if (!isGroupFinding) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -1023,6 +1031,25 @@ fun ContactInfoDialog(
                     }
                 }
             }
+        }
+    }
+}
+
+// ============ opens the post location inside Google Maps (Maps app first, browser fallback) ============
+private fun openInGoogleMaps(context: Context, location: String) {
+    val query = java.net.URLEncoder.encode(location, "UTF-8")
+    try {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, "geo:0,0?q=$query".toUri())
+                .setPackage("com.google.android.apps.maps")
+        )
+    } catch (_: Exception) {
+        try {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, "https://www.google.com/maps/search/?api=1&query=$query".toUri())
+            )
+        } catch (_: Exception) {
+            // no maps app and no browser — quietly ignore
         }
     }
 }

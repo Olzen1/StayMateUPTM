@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -68,7 +67,7 @@ fun AdminBottomNavBar(
                             Icon(
                                 item.icon,
                                 contentDescription = null,
-                                tint = Color(0xFF0091FF).copy(alpha = 0.7f),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                                 modifier = Modifier
                                     .size(26.dp)
                                     .blur(6.dp)
@@ -81,7 +80,7 @@ fun AdminBottomNavBar(
                             tint = if (selectedRoute == item.route)
                                 MaterialTheme.colorScheme.tertiary
                             else
-                                Color(0xFF9CA3AF),
+                                MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(26.dp)
                         )
                     }
