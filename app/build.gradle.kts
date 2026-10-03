@@ -88,4 +88,7 @@
         implementation(libs.androidx.lifecycle.runtime.compose)
         implementation(libs.coil.network.okhttp) // // the internet-visa plugin, same version as coil-compose
         implementation(libs.coil.compose) // function adds the Coil library that loads and shows pictures smoothly
+
+        // Cloudinary — uploads post photos to the yuwfqffe cloud (unsigned preset d6o5qko7)
+        implementation(libs.cloudinary.android)
     }

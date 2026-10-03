@@ -1,6 +1,9 @@
 package com.staymate.uptm
 
 // base-android tools to read the slip and write a real file
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,8 +29,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
@@ -66,13 +71,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.staymate.uptm.utils.UptmConstants
 import com.staymate.uptm.viewmodel.AddPostUiState
 import com.staymate.uptm.viewmodel.AddPostViewModel
@@ -325,6 +336,15 @@ fun AddPostScreen(
                     }
                 } else {
                     // HOUSE SUGGESTION / HOUSEMATE WANTED FIELDS
+
+                    // PROPERTY PHOTO — optional, 1 photo per post, uploaded to Cloudinary.
+                    // Sits above POST DETAILS and only applies to these two post types.
+                    SectionLabel("PROPERTY PHOTO", icon = Icons.Default.AddAPhoto)
+
+                    FormCard {
+                        PostPhotoSection(viewModel = addPostViewModel)
+                    }
+
                     SectionLabel("POST DETAILS", icon = Icons.Default.Home)
 
                     FormCard {
@@ -934,3 +954,140 @@ private fun postFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = colorScheme.surface,
     unfocusedContainerColor = colorScheme.surface
 )
+
+// PROPERTY PHOTO — optional, 1 photo per post.
+// Empty state: dashed drop-zone (follows the app theme) that opens the system photo picker.
+// Once a photo is picked it uploads straight to Cloudinary while a spinner covers the preview.
+@Composable
+private fun PostPhotoSection(viewModel: AddPostViewModel) {
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        viewModel.onPhotoPicked(uri)
+    }
+
+    val previewModel = viewModel.photoUri ?: viewModel.photoUrl
+
+    if (previewModel == null) {
+        // No photo yet — dashed add-photo box
+        val dashColor = colorScheme.primary.copy(alpha = 0.45f)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .drawBehind {
+                    drawRoundRect(
+                        color = dashColor,
+                        cornerRadius = CornerRadius(16.dp.toPx()),
+                        style = Stroke(
+                            width = 1.5.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
+                        )
+                    )
+                }
+                .clickable {
+                    photoPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.AddAPhoto,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(34.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Add Photo",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = "Tap to upload or select from gallery",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Text(
+                    text = "(Optional · 1 photo)",
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    } else {
+        // Preview of the picked (or already uploaded) photo
+        Box(modifier = Modifier.fillMaxWidth()) {
+            AsyncImage(
+                model = previewModel,
+                contentDescription = "Selected property photo",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            if (viewModel.isUploadingPhoto) {
+                // Upload in progress — dim the preview and show a spinner
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(alpha = 0.45f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Color.White)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Uploading photo...",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else {
+                // Remove (X) button on the top-right corner
+                IconButton(
+                    onClick = { viewModel.removePhoto() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        // Upload failure — photo stays optional, so the user can retry or post without it
+        viewModel.photoError?.let { message ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = message,
+                    color = colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { viewModel.retryPhotoUpload() }) {
+                    Text(text = "Retry", color = colorScheme.primary)
+                }
+            }
+        }
+    }
+}

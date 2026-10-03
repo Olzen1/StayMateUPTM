@@ -30,11 +30,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.google.firebase.Timestamp
 import com.staymate.uptm.model.Post
 import com.staymate.uptm.utils.UptmConstants
@@ -119,6 +122,22 @@ fun PostCard(
             }
 
             Spacer(modifier = Modifier.height(10.dp))
+
+            // Post Photo — only rendered when the post actually has one,
+            // so photo-less posts look exactly as before (no placeholder box)
+            val postPhotoUrl = post.photoUrls.firstOrNull()
+            if (!postPhotoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = postPhotoUrl,
+                    contentDescription = "Post photo",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
 
             // Post Title
             Text(

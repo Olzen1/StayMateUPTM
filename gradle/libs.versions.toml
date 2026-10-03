@@ -15,6 +15,7 @@ material = "1.14.0"
 constraintlayout = "2.2.2"
 googleServices = "4.5.0"
 firebaseBom = "34.19.0"
+cloudinary = "3.1.2"
 
 ksp = "2.3.11"
 playServicesCoroutines = "1.11.0"
@@ -29,6 +30,7 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
+cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref = "cloudinary" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

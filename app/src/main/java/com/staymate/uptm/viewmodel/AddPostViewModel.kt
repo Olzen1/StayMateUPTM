@@ -1,5 +1,6 @@
 package com.staymate.uptm.viewmodel
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -8,8 +9,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.staymate.uptm.model.Post
 import com.staymate.uptm.repository.AuthRepository
+import com.staymate.uptm.repository.CloudinaryRepository
 import com.staymate.uptm.repository.PostRepository
 import com.staymate.uptm.utils.UptmConstants
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +28,8 @@ sealed interface AddPostUiState {
 }
 class AddPostViewModel(
     private val postRepository: PostRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val cloudinaryRepository: CloudinaryRepository = CloudinaryRepository()
 ) : ViewModel() {
     var photoError by mutableStateOf<String?>(null)
     private val _addPostUiState = MutableStateFlow<AddPostUiState>(AddPostUiState.Idle)
@@ -40,11 +44,55 @@ class AddPostViewModel(
     // Step state: 1 = Details, 2 = Contact Information
     var currentStep by mutableIntStateOf(1)
 
-    // Photo memory
+    // Photo memory — the local Uri picked from the gallery + the Cloudinary result
+    var photoUri by mutableStateOf<Uri?>(null)
     var photoUrl by mutableStateOf<String?>(null)
-
     var photoPublicId by mutableStateOf<String?>(null)
     var isUploadingPhoto by mutableStateOf(false)
+    private var photoUploadJob: Job? = null
+
+    // Called when the user picks (or cancels) a photo in the system photo picker
+    fun onPhotoPicked(uri: Uri?) {
+        photoError = null
+        if (uri == null) return
+        photoUri = uri
+        photoUrl = null
+        photoPublicId = null
+        startPhotoUpload()
+    }
+
+    private fun startPhotoUpload() {
+        val uri = photoUri ?: return
+        photoUploadJob = viewModelScope.launch {
+            isUploadingPhoto = true
+            val result = cloudinaryRepository.uploadImage(uri)
+            isUploadingPhoto = false
+            result
+                .onSuccess { upload ->
+                    photoUrl = upload.secureUrl
+                    photoPublicId = upload.publicId
+                }
+                .onFailure { error ->
+                    photoError = error.message ?: "Photo upload failed. Please try again."
+                }
+        }
+    }
+
+    fun retryPhotoUpload() {
+        if (photoUri != null && photoUrl == null && !isUploadingPhoto) {
+            startPhotoUpload()
+        }
+    }
+
+    fun removePhoto() {
+        photoUploadJob?.cancel()
+        photoUploadJob = null
+        photoUri = null
+        photoUrl = null
+        photoPublicId = null
+        isUploadingPhoto = false
+        photoError = null
+    }
 
     // Form fields - Step 1: Details
     var postType by mutableStateOf("")
@@ -111,6 +159,11 @@ class AddPostViewModel(
         contactWhatsapp = post.whatsappNumber
         contactOtherInfo = post.contactOtherInfo
         _addPostUiState.value = AddPostUiState.Idle
+        photoUploadJob?.cancel()
+        photoUploadJob = null
+        photoUri = null
+        photoError = null
+        isUploadingPhoto = false
         photoUrl = post.photoUrls.firstOrNull()
     }
 
@@ -173,6 +226,10 @@ class AddPostViewModel(
                     AddPostUiState.Error("Please fill in required Contact Information (Phone Number and Gender).")
                 return@launch
             }
+
+            // If a photo upload is still running, wait for it to finish.
+            // The photo is optional — if the upload failed we simply save the post without it.
+            photoUploadJob?.join()
 
             _addPostUiState.value = AddPostUiState.Saving
             val uid = authRepository.currentUid()
@@ -265,11 +322,12 @@ class AddPostViewModel(
         contactWhatsapp = ""
         contactOtherInfo = ""
         _addPostUiState.value = AddPostUiState.Idle
+        photoUploadJob?.cancel()
+        photoUploadJob = null
+        photoUri = null
         photoUrl = null
         isUploadingPhoto = false
         photoPublicId = null
-
         photoError = null
-
     }
 }

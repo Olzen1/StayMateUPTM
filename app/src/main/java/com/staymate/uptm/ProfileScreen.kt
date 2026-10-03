@@ -87,7 +87,8 @@ fun ProfileScreen(
             .background(colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
-        // ---------- TOP: blue header, PROFILE title, NO gear icon ----------
+        //TOP: blue header, PROFILE title, NO gear icon
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -102,13 +103,17 @@ fun ProfileScreen(
                 ),
             contentAlignment = Alignment.TopCenter
         ) {
+
             Text(
                 text = "PROFILE",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 4.sp,
                 color = colorScheme.primaryContainer,
-                modifier = Modifier.padding(top = 24.dp)
+                modifier = Modifier
+                    .padding(top = 24.dp)
+                    .offset(y = 30.dp)
+
             )
         }
 
@@ -119,7 +124,7 @@ fun ProfileScreen(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ---------- PROFILE PHOTO (tap to change) ----------
+            // PROFILE PHOTO (tap to change)
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -201,7 +206,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ----------    divider line between top and middle section
+            // divider line between top and middle section
             HorizontalDivider(modifier = Modifier.fillMaxWidth(), color = Color(0xFFE5E7EB))
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -234,7 +239,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // ---------- LOG OUT ----------
+            // LOG OUT
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,7 +265,7 @@ fun ProfileScreen(
             viewModel.resetSave() // function back to Idle so it cannot re-fire next open
         }
     }
-    // ---------- EDIT PROFILE (UI only — no saving to database yet) ----------
+    // EDIT PROFILE (UI only — no saving to database yet)
     if (showEditDialog) {
         EditProfileDialog(
             onDismiss = { showEditDialog = false },
@@ -319,9 +324,7 @@ private fun MenuItem(icon: ImageVector, text: String, onClick: () -> Unit) {
         Text(text, fontSize = 15.sp, color = colorScheme.onSurface, fontWeight = FontWeight.Medium)
     }
 }
-// Profile avatar with Google photo and initials fallback
-// Profile avatar with Google photo and initials fallback
-// Profile avatar with Google photo and initials fallback
+
 @Composable
 fun ProfileAvatar(
     photoUrl: String?,

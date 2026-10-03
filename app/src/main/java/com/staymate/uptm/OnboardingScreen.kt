@@ -120,7 +120,7 @@ fun OnboardingScreen(
             }
         }
 
-        // ============ FORM CARD ============
+        // FORM CARD
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -184,7 +184,7 @@ fun OnboardingScreen(
 
                     Spacer(Modifier.height(4.dp))
 
-                    // ---------- SECURE YOUR ACCOUNT ----------
+                    // SECURE YOUR ACCOUNT
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Lock,
@@ -244,7 +244,7 @@ fun OnboardingScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // ---------- live password strength checklist ----------
+                    //  live password strength checklist
                     if (password.isNotEmpty()) {
                         Surface(
                             shape = RoundedCornerShape(14.dp),
@@ -286,7 +286,7 @@ fun OnboardingScreen(
                         }
                     }
 
-                    // ---------- the big finish button ----------
+                    // the big finish button
                     Button(
                         onClick = viewModel::submit,
                         enabled = uiState !is OnboardingUiState.Saving,
@@ -318,7 +318,7 @@ fun OnboardingScreen(
     }
 }
 
-// ---------- tiny helpers for the password rules ----------
+// tiny helpers for the password rules
 private fun String.containsShort() = length < 6
 private fun String.hasSpecial() = any { !it.isLetterOrDigit() }
 private fun String.hasUppercase() = any { it.isUpperCase() }

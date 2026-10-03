@@ -118,8 +118,11 @@ fun PostDetailsScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val currentUid = AuthRepository().currentUid()
+    val currentEmail = AuthRepository().currentEmail().orEmpty()
     val currentPost = (uiState as? PostDetailsUiState.Success)?.post
     val isOwner = currentPost != null && currentPost.authorUid == currentUid
+    val isAdmin = (currentEmail.isNotBlank() && AuthRepository().isAdminEmail(currentEmail)) || currentUid == "tGBEwApW1aVIXPJCnyRV28KEU9p2"
+    val canEditOrDelete = isOwner || isAdmin
 
     Column(
         modifier = Modifier
@@ -165,7 +168,7 @@ fun PostDetailsScreen(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    if (isOwner || onEditClick != null) {
+                    if (canEditOrDelete) {
                         DropdownMenuItem(
                             text = { Text("Delete Post", color = Color.Red, fontWeight = FontWeight.Bold) },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red) },
@@ -373,6 +376,21 @@ fun PostDetailsScreen(
                                 modifier = Modifier.padding(18.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                // Post Photo — only rendered when the post actually has one,
+                                // so photo-less posts keep their original look (no placeholder box)
+                                val postPhotoUrl = post.photoUrls.firstOrNull()
+                                if (!postPhotoUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = postPhotoUrl,
+                                        contentDescription = "Post photo",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(220.dp)
+                                            .clip(RoundedCornerShape(16.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+
                                 // type badge chip
                                 Surface(
                                     color = when (post.type) {
@@ -503,7 +521,7 @@ fun PostDetailsScreen(
                             Text("Contact", fontWeight = FontWeight.Bold)
                         }
 
-                        if (isOwner || onEditClick != null) {
+                        if (canEditOrDelete) {
                             OutlinedButton(
                                 onClick = { onEditClick?.invoke(post) },
                                 modifier = Modifier
@@ -676,7 +694,7 @@ private fun FactTile(
     }
 }
 
-// ============ money tiles: deposit / current housemates ============
+// money tiles: deposit / current housemates
 @Composable
 private fun MoneyInfoCard(post: Post) {
     val hasDeposit = post.deposit > 0
@@ -725,7 +743,7 @@ private fun MoneyInfoCard(post: Post) {
 }
 
 
-// ============ facilities as little check-chips ============
+//  facilities as little check-chips
 @Composable
 private fun FacilitiesCard(post: Post) {
     Surface(
@@ -793,7 +811,7 @@ private fun FacilitiesCard(post: Post) {
     }
 }
 
-// ============ about: description + gender preference + property link ============
+// about: description + gender preference + property link
 @Composable
 private fun AboutCard(
     post: Post,
@@ -1035,7 +1053,7 @@ fun ContactInfoDialog(
     }
 }
 
-// ============ opens the post location inside Google Maps (Maps app first, browser fallback) ============
+// opens the post location inside Google Maps (Maps app first, browser fallback) ============
 private fun openInGoogleMaps(context: Context, location: String) {
     val query = java.net.URLEncoder.encode(location, "UTF-8")
     try {
