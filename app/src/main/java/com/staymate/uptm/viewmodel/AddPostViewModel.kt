@@ -154,7 +154,7 @@ class AddPostViewModel(
         selectedFacilities = post.facilities
         moveInDateMillis = if (post.moveInDate > 0) post.moveInDate else null
         contactPhone = post.contactPhone
-        contactEmail = post.contactEmail.ifBlank { authRepository.currentEmail().orEmpty() }
+        contactEmail = post.contactEmail
         contactGender = post.contactGender.ifBlank { post.genderPreference }
         contactWhatsapp = post.whatsappNumber
         contactOtherInfo = post.contactOtherInfo
@@ -270,8 +270,7 @@ class AddPostViewModel(
                 createdAt = editingCreatedAt ?: com.google.firebase.Timestamp.now(),
                 description = description,
                 contactPhone = contactPhone.trim(),
-                contactEmail = contactEmail.trim()
-                    .ifBlank { authRepository.currentEmail().orEmpty() },
+                contactEmail = if (editingPostId != null) contactEmail.trim() else contactEmail.trim().ifBlank { authRepository.currentEmail().orEmpty() },
                 contactGender = contactGender,
                 whatsappNumber = contactWhatsapp.trim().ifBlank { contactPhone.trim() },
                 contactOtherInfo = contactOtherInfo.trim(),

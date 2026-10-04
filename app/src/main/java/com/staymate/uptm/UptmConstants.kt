@@ -67,7 +67,7 @@ object UptmConstants {
     val FACILITIES = listOf( // function makes a fixed list of house features
         "WiFi", "Air Conditioning", "Parking", "Washing Machine",
         "Kitchen", "24hr Security","Pet Friendly",
-        "Gym", "Badminton Court", "BBQ"
+        "Gym", "Badminton Court", "BBQ", "Swimming Pool"
     )
     val FURNISHED = listOf(
         "Fully Furnished","Partially Furnished","No Furnishes"

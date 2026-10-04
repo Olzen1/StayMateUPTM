@@ -1,5 +1,10 @@
 package com.staymate.uptm
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -39,15 +45,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -58,7 +70,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.staymate.uptm.model.UserProfile
-import com.staymate.uptm.utils.UptmConstants
 import com.staymate.uptm.viewmodel.AdminViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,6 +83,32 @@ fun AdminUsersScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
+
+    var isSearchVisible by remember { mutableStateOf(true) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -12f) {
+                    isSearchVisible = false
+                } else if (delta > 12f) {
+                    isSearchVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 }
+            .collect { isAtTop ->
+                if (isAtTop) {
+                    isSearchVisible = true
+                }
+            }
+    }
 
     val filteredUsers = remember(users, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -91,6 +128,7 @@ fun AdminUsersScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .background(MaterialTheme.colorScheme.background)
+            .nestedScroll(nestedScrollConnection)
     ) {
         // Gradient header — same blue wash as the student screens, with a live user count
         Box(
@@ -132,45 +170,54 @@ fun AdminUsersScreen(
             }
         }
 
-        // Search Bar (Same design as SearchScreen)
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search by name, email, course...", color = Color.Gray, fontSize = 13.sp) },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray
-                )
-            },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
+        // Collapsible Search Bar
+        AnimatedVisibility(
+            visible = isSearchVisible || searchQuery.isNotEmpty() || filteredUsers.isEmpty(),
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by name, email, course...", color = Color.Gray, fontSize = 13.sp) },
+                    leadingIcon = {
                         Icon(
-                            Icons.Default.Clear,
-                            contentDescription = "Clear",
+                            Icons.Default.Search,
+                            contentDescription = "Search",
                             tint = Color.Gray
                         )
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    focusManager.clearFocus()
-                }
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = Color(0xFFE0E0E0)
-            )
-        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = Color.Gray
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    )
+                )
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -199,6 +246,7 @@ fun AdminUsersScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -253,27 +301,21 @@ fun AdminUsersScreen(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-
-                                        Spacer(modifier = Modifier.height(2.dp))
-
                                         Text(
                                             text = user.email,
-                                            fontSize = 12.sp,
+                                            fontSize = 13.sp,
                                             color = Color.Gray,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-
-                                        val courseSemester = listOf(user.course, user.semester)
-                                            .filter { it.isNotBlank() }
-                                            .joinToString("\n")
-
-                                        if (courseSemester.isNotBlank()) {
-                                            Spacer(modifier = Modifier.height(2.dp))
+                                        if (user.course.isNotBlank()) {
                                             Text(
-                                                text = courseSemester,
+                                                text = "${user.course} ${if (user.semester.isNotBlank()) "· Sem ${user.semester}" else ""}",
                                                 fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.primary
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
@@ -281,43 +323,45 @@ fun AdminUsersScreen(
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                // Edit User (left) & Delete User (right) side-by-side
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Button(
                                         onClick = { userToEdit = user },
-                                        modifier = Modifier.weight(1f),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary
+                                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                            contentColor = MaterialTheme.colorScheme.primary
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Edit",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(15.dp)
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit profile",
+                                            modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Edit User", fontSize = 12.sp, color = Color.White)
+                                        Text(text = "Edit Profile", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
 
                                     Button(
                                         onClick = { userToDelete = user },
-                                        modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                                            contentColor = MaterialTheme.colorScheme.error
+                                        ),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(15.dp)
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete user",
+                                            modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Delete User", fontSize = 12.sp, color = Color.White)
+                                        Text(text = "Delete", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                             }
@@ -328,106 +372,53 @@ fun AdminUsersScreen(
         }
     }
 
-    // EDIT USER dialog — same three editable fields as the student's own Edit Profile dialog
+    // Edit User Dialog
     userToEdit?.let { user ->
-        EditUserDialog(
-            user = user,
+        EditProfileDialog(
+            currentName = user.fullName,
+            currentCourse = user.course,
+            currentSemester = user.semester,
             onDismiss = { userToEdit = null },
-            onConfirm = { fullName, course, semester ->
-                adminViewModel.updateUser(user.uid, fullName, course, semester)
+            onSave = { updatedName, updatedCourse, updatedSemester ->
+                adminViewModel.updateUser(user.uid, updatedName, updatedCourse, updatedSemester)
                 userToEdit = null
             }
         )
     }
 
-    // DELETE USER confirm dialog
-    if (userToDelete != null) {
+    // Confirmation dialog before deleting a user account
+    userToDelete?.let { targetUser ->
         AlertDialog(
             onDismissRequest = { userToDelete = null },
-            title = { Text("Delete User", fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    text = "Delete User Account?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
             text = {
                 Text(
-                    "Delete ${userToDelete!!.fullName.ifBlank { "this user" }} from Registered Users? " +
-                            "Their profile will be removed permanently. Their posts will remain in the app."
+                    text = "Are you sure you want to permanently delete \"${targetUser.fullName.ifBlank { targetUser.email }}\"? This will remove their user record.",
+                    fontSize = 14.sp
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val uid = userToDelete!!.uid
+                        adminViewModel.deleteUser(targetUser.uid)
                         userToDelete = null
-                        adminViewModel.deleteUser(uid)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Delete", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { userToDelete = null }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
             }
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditUserDialog(
-    user: UserProfile,
-    onDismiss: () -> Unit,
-    onConfirm: (fullName: String, course: String, semester: String) -> Unit
-) {
-    var fullName by remember { mutableStateOf(user.fullName) }
-    var course by remember { mutableStateOf(user.course) }
-    var semester by remember { mutableStateOf(user.semester) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor= MaterialTheme.colorScheme.background,
-        title = { Text("Edit User", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.background(MaterialTheme.colorScheme.background),) {
-                Text(
-                    text = user.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                OutlinedTextField(
-                    value = fullName,
-                    onValueChange = { fullName = it },
-                    label = { Text("Full Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                UptmDropdown(
-                    "Course",
-                    UptmConstants.COURSES,
-                    course,
-                    onSelect = { course = it }
-                )
-                UptmDropdown(
-                    "Semester",
-                    UptmConstants.SEMESTERS,
-                    semester,
-                    onSelect = { semester = it }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(fullName.trim(), course, semester) },
-                enabled = fullName.isNotBlank()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
